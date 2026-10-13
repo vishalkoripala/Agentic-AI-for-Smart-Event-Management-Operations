@@ -1,0 +1,80 @@
+<!--suppress HtmlUnknownTarget -->
+{% extends "base.html" %}
+
+{% block title %}Contact Inbox | EventOps AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .contact-inbox-page { width: min(100%, 1360px); margin-inline: auto; color: #17213b; }
+    .inbox-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+    .inbox-kicker { color: #0d6efd; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+    .inbox-header h1 { margin: 0.35rem 0 0.4rem; font-size: clamp(1.8rem, 3vw, 2.5rem); font-weight: 800; letter-spacing: -0.04em; }
+    .inbox-header p { margin: 0; color: #68748b; }
+    .inbox-count { padding: 0.65rem 0.9rem; border-radius: 999px; background: #edf3ff; color: #245edb; font-size: 0.88rem; font-weight: 750; white-space: nowrap; }
+    .inbox-card { overflow: hidden; border: 1px solid #e5eaf3; border-radius: 1.25rem; background: #fff; box-shadow: 0 14px 38px rgba(28, 42, 82, 0.06); }
+    .inbox-table { margin: 0; }
+    .inbox-table th { padding: 0.95rem 1rem; border-bottom-color: #e5eaf3; background: #f8faff; color: #68748b; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+    .inbox-table td { padding: 1rem; border-bottom-color: #edf0f5; color: #37435a; vertical-align: top; }
+    .inbox-table tbody tr:last-child td { border-bottom: 0; }
+    .inbox-sender { color: #17213b; font-weight: 750; }
+    .inbox-email { display: inline-block; margin-top: 0.2rem; color: #245edb; font-size: 0.86rem; text-decoration: none; }
+    .inbox-email:hover { text-decoration: underline; }
+    .inbox-topic { display: inline-block; padding: 0.38rem 0.62rem; border-radius: 999px; background: #f0f3f8; color: #526078; font-size: 0.76rem; font-weight: 700; white-space: nowrap; }
+    .inbox-message { min-width: 300px; max-width: 560px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+    .inbox-date { min-width: 150px; color: #68748b; font-size: 0.86rem; }
+    .inbox-empty { padding: 4rem 1.5rem; text-align: center; }
+    .inbox-empty i { display: block; margin-bottom: 0.8rem; color: #91a9d6; font-size: 2.4rem; }
+    .inbox-empty h2 { margin: 0 0 0.45rem; color: #17213b; font-size: 1.15rem; font-weight: 750; }
+    .inbox-empty p { margin: 0; color: #68748b; }
+    @media (max-width: 47.99rem) { .inbox-header { align-items: flex-start; flex-direction: column; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="contact-inbox-page" aria-labelledby="contact-inbox-title">
+    <div class="inbox-header">
+        <div>
+            <span class="inbox-kicker"><i class="bi bi-envelope-paper me-1" aria-hidden="true"></i> EventOps AI admin</span>
+            <h1 id="contact-inbox-title">Contact inbox</h1>
+            <p>Review messages submitted through the public contact page.</p>
+        </div>
+        <span class="inbox-count">{{ messages|length }} {{ 'message' if messages|length == 1 else 'messages' }}</span>
+    </div>
+
+    <div class="inbox-card">
+        {% if messages %}
+            <div class="table-responsive">
+                <table class="table inbox-table align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">Received</th>
+                            <th scope="col">From</th>
+                            <th scope="col">Topic</th>
+                            <th scope="col">Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contact_message in messages %}
+                            <tr>
+                                <td class="inbox-date">{{ contact_message.created_at.strftime('%d %b %Y, %I:%M %p') }}</td>
+                                <td>
+                                    <div class="inbox-sender">{{ contact_message.name }}</div>
+                                    <a class="inbox-email" href="mailto:{{ contact_message.email }}">{{ contact_message.email }}</a>
+                                </td>
+                                <td><span class="inbox-topic">{{ contact_message.topic.replace('-', ' ').title() }}</span></td>
+                                <td><div class="inbox-message">{{ contact_message.message }}</div></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="inbox-empty">
+                <i class="bi bi-inbox" aria-hidden="true"></i>
+                <h2>Your inbox is clear</h2>
+                <p>Messages submitted through the contact page will appear here.</p>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
