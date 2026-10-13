@@ -1,0 +1,13 @@
+<!--suppress HtmlUnknownTarget -->
+{% extends "base.html" %}
+{% block title %}New Notification | EventOps AI{% endblock %}
+{% block content %}
+<section class="container-xl" style="max-width: 860px;"><a class="small text-decoration-none" href="{{ url_for('admin_notifications') }}"><i class="bi bi-arrow-left me-1"></i>Notifications</a><div class="card border-0 shadow-sm mt-3"><div class="card-body p-4 p-md-5"><span class="text-primary fw-bold text-uppercase small">Notification history</span><h1 class="h2 fw-bold mt-1">Create notification record</h1><p class="text-secondary">This demo records the message in EventOps AI; connect a delivery provider to send email or SMS.</p>
+<form method="POST" action="{{ url_for('admin_notification_send') }}" class="row g-3 mt-1">
+    <div class="col-md-6"><label class="form-label fw-semibold" for="recipient">Recipient</label><input class="form-control" id="recipient" name="recipient" maxlength="100" required></div>
+    <div class="col-md-6"><label class="form-label fw-semibold" for="channel">Channel</label><select class="form-select" id="channel" name="channel" required><option value="email">Email</option><option value="sms">SMS</option><option value="push">Push</option></select></div>
+    <div class="col-12"><label class="form-label fw-semibold" for="subject">Subject</label><input class="form-control" id="subject" name="subject" maxlength="200" required></div>
+    <div class="col-12"><label class="form-label fw-semibold" for="message">Message</label><textarea class="form-control" id="message" name="message" rows="5" required></textarea></div>
+    <div class="col-12"><button class="btn btn-primary" type="submit">Save notification record</button><a class="btn btn-link" href="{{ url_for('admin_notifications') }}">Cancel</a></div>
+</form></div></div></section>
+{% endblock %}

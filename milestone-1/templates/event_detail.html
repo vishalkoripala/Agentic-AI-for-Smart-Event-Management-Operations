@@ -1,0 +1,19 @@
+<!--suppress HtmlUnknownTarget -->
+{% extends "base.html" %}
+
+{% block title %}{{ event.title }} | EventOps AI{% endblock %}
+
+{% block content %}
+<section class="container-xl" style="max-width: 980px;">
+    <a class="small text-decoration-none" href="{{ url_for('browse_events') }}"><i class="bi bi-arrow-left me-1"></i>All events</a>
+    <article class="card border-0 shadow-sm mt-3"><div class="card-body p-4 p-md-5">
+        <div class="d-flex flex-wrap justify-content-between gap-2"><span class="badge text-bg-primary">{{ event.status|title }}</span>{% if event.capacity %}<span class="text-secondary small">Capacity: {{ event.capacity }}</span>{% endif %}</div>
+        <h1 class="display-6 fw-bold mt-3">{{ event.title }}</h1>
+        <p class="text-secondary">{% if event.date %}<i class="bi bi-calendar-event me-1"></i>{{ event.date }}{% endif %}{% if event.time %} · {{ event.time }}{% endif %}{% if event.location %}<br><i class="bi bi-geo-alt me-1"></i>{{ event.location }}{% endif %}</p>
+        <hr><p class="fs-5">{{ event.description or 'More event details will be announced soon.' }}</p>
+        {% if registered %}<div class="alert alert-success mb-0"><i class="bi bi-check-circle-fill me-1"></i>You’re registered for this event. <a href="{{ url_for('user_my_registrations') }}">View your registrations</a>.</div>
+        {% elif event.status == 'upcoming' %}<a class="btn btn-primary btn-lg" href="{{ url_for('register_for_event', event_id=event.id) }}">Register for this event <i class="bi bi-arrow-right ms-1"></i></a>
+        {% else %}<span class="badge text-bg-secondary">Registration is not available for this event.</span>{% endif %}
+    </div></article>
+</section>
+{% endblock %}

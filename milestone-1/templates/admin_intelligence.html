@@ -1,0 +1,62 @@
+<!--suppress HtmlUnknownTarget -->
+{% extends "base.html" %}
+{% block title %}Event Intelligence | EventOps AI{% endblock %}
+{% block content %}
+<section class="container-xl"><div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4"><div><span class="text-primary fw-bold text-uppercase small">EventOps AI</span><h1 class="h2 fw-bold mt-1 mb-1">Intelligence engine</h1><p class="text-secondary mb-0">Agent performance and event health overview.</p></div><span class="small text-secondary">Updated {{ last_updated }}</span></div>
+<div class="row g-3 mb-4"><div class="col-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="small text-secondary">Event health</div><div class="display-6 fw-bold text-primary">{{ health_score }}%</div></div></div></div><div class="col-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="small text-secondary">Active agents</div><div class="display-6 fw-bold text-success">{{ active_agents }}/{{ total_agents }}</div></div></div></div><div class="col-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="small text-secondary">Open incidents</div><div class="display-6 fw-bold text-danger">{{ open_incidents }}</div></div></div></div><div class="col-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="small text-secondary">Registrations</div><div class="display-6 fw-bold text-info">{{ total_registrations }}</div></div></div></div></div>
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white fw-bold">Agent performance</div>
+            <div class="card-body"><canvas id="agentScores" height="250" aria-label="Agent performance scores"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-bold">Agent status</div>
+            <div class="list-group list-group-flush">
+                {% for agent in agents %}
+                    {% if agent.score >= 70 %}
+                        {% set score_class = 'success' %}
+                    {% elif agent.score >= 40 %}
+                        {% set score_class = 'warning' %}
+                    {% else %}
+                        {% set score_class = 'danger' %}
+                    {% endif %}
+                    <div class="list-group-item py-3">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ agent.name }}</strong>
+                            <span class="badge" data-score-class="text-bg-{{ score_class }}">{{ agent.score }}%</span>
+                        </div>
+                        <div class="progress mt-2" role="progressbar" aria-valuenow="{{ agent.score }}" aria-valuemin="0" aria-valuemax="100">
+                            <div class="progress-bar" data-score="{{ agent.score }}" data-score-class="bg-{{ score_class }}"></div>
+                        </div>
+                        <small class="text-secondary">{{ agent.tasks_processed }} tasks · {{ agent.success_rate }}% success</small>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card border-0 shadow-sm mt-4"><div class="card-header bg-white fw-bold">7-day health trend</div><div class="card-body"><canvas id="healthTrend" height="100" aria-label="Seven-day event health trend"></canvas></div></div>
+</section>
+{% endblock %}
+{% block extra_js %}
+<div id="intelligence-data" hidden data-agent-scores="{{ agent_scores|tojson|forceescape }}" data-health-trend="{{ health_trend|tojson|forceescape }}"></div>
+<script>
+const intelligenceData = document.getElementById('intelligence-data');
+const agentScores = JSON.parse(intelligenceData.dataset.agentScores || '{}');
+const healthTrend = JSON.parse(intelligenceData.dataset.healthTrend || '{"labels":[],"values":[]}');
+document.querySelectorAll('[data-score]').forEach((bar) => {
+    const score = Number(bar.dataset.score);
+    if (Number.isFinite(score)) bar.style.width = `${score}%`;
+});
+document.querySelectorAll('[data-score-class]').forEach((element) => {
+    const className = element.dataset.scoreClass;
+    if (className) element.classList.add(className);
+});
+const ChartConstructor = window['Chart'];
+new ChartConstructor(document.getElementById('agentScores'), {type:'bar',data:{labels:Object.keys(agentScores),datasets:[{label:'Score',data:Object.values(agentScores),backgroundColor:['#198754','#0d6efd','#ffc107','#6f42c1','#dc3545'],borderRadius:8}]},options:{responsive:true,scales:{y:{beginAtZero:true,max:100}}}});
+new ChartConstructor(document.getElementById('healthTrend'), {type:'line',data:{labels:healthTrend.labels,datasets:[{label:'Health score',data:healthTrend.values,borderColor:'#0d6efd',backgroundColor:'rgba(13,110,253,.12)',fill:true,tension:.35}]},options:{responsive:true,scales:{y:{beginAtZero:true,max:100}}}});
+</script>
+{% endblock %}

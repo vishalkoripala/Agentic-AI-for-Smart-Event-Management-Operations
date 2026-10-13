@@ -1,0 +1,37 @@
+<!--suppress HtmlUnknownTarget -->
+{% extends "base.html" %}
+{% set editing = event is not none %}
+{% block title %}{{ 'Edit' if editing else 'Add' }} Event | EventOps AI{% endblock %}
+{% block content %}
+<section class="container-xl" style="max-width: 900px;"><a class="small text-decoration-none" href="{{ url_for('admin_events') }}"><i class="bi bi-arrow-left me-1"></i>Events</a><div class="card border-0 shadow-sm mt-3"><div class="card-body p-4 p-md-5"><span class="text-primary fw-bold text-uppercase small">Event management</span><h1 class="h2 fw-bold mt-1">{{ 'Edit event' if editing else 'Add an event' }}</h1>
+    <form method="POST" action="{{ url_for('admin_event_edit', event_id=event.id) if editing else url_for('admin_event_add') }}" class="row g-3 mt-1">
+        <div class="col-12"><label class="form-label fw-semibold" for="title">Event title</label><input class="form-control" id="title" name="title" maxlength="200" value="{{ event.title if editing else '' }}" required></div>
+        <div class="col-12"><label class="form-label fw-semibold" for="description">Description</label><textarea class="form-control" id="description" name="description" rows="4">{{ event.description if editing and event.description else '' }}</textarea></div>
+        <div class="col-md-6"><label class="form-label fw-semibold" for="date">Date</label><input class="form-control" id="date" name="date" type="date" value="{{ event.date if editing and event.date else '' }}"></div>
+        <div class="col-md-6"><label class="form-label fw-semibold" for="time">Time</label><input class="form-control" id="time" name="time" value="{{ event.time if editing and event.time else '' }}" placeholder="e.g. 9:00 AM"></div>
+        <div class="col-md-6"><label class="form-label fw-semibold" for="location">Location</label><input class="form-control" id="location" name="location" maxlength="200" value="{{ event.location if editing and event.location else '' }}"></div>
+        <div class="col-md-3"><label class="form-label fw-semibold" for="capacity">Capacity</label><input class="form-control" id="capacity" name="capacity" type="number" min="1" value="{{ event.capacity if editing and event.capacity else '' }}"></div>
+        <div class="col-md-3">
+            <label class="form-label fw-semibold" for="status">Status</label>
+            <select class="form-select" id="status" name="status">
+                {% if not editing or event.status == 'upcoming' %}
+                <option value="upcoming" selected>Upcoming</option>
+                {% else %}
+                <option value="upcoming">Upcoming</option>
+                {% endif %}
+                {% if editing and event.status == 'ongoing' %}
+                <option value="ongoing" selected>Ongoing</option>
+                {% else %}
+                <option value="ongoing">Ongoing</option>
+                {% endif %}
+                {% if editing and event.status == 'completed' %}
+                <option value="completed" selected>Completed</option>
+                {% else %}
+                <option value="completed">Completed</option>
+                {% endif %}
+            </select>
+        </div>
+        <div class="col-12"><button class="btn btn-primary" type="submit">{{ 'Save changes' if editing else 'Create event' }}</button><a class="btn btn-link" href="{{ url_for('admin_events') }}">Cancel</a></div>
+    </form>
+</div></div></section>
+{% endblock %}

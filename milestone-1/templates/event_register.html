@@ -1,0 +1,19 @@
+<!--suppress HtmlUnknownTarget -->
+{% extends "base.html" %}
+
+{% block title %}Register: {{ event.title }} | EventOps AI{% endblock %}
+
+{% block content %}
+<section class="container-xl" style="max-width: 860px;">
+    <a class="small text-decoration-none" href="{{ url_for('event_detail', event_id=event.id) }}"><i class="bi bi-arrow-left me-1"></i>Back to event</a>
+    <div class="card border-0 shadow-sm mt-3"><div class="card-body p-4 p-md-5">
+        <span class="badge text-bg-primary mb-3">Event registration</span><h1 class="h2 fw-bold">{{ event.title }}</h1>
+        <p class="text-secondary">{% if event.date %}<i class="bi bi-calendar-event me-1"></i>{{ event.date }}{% endif %}{% if event.time %} · {{ event.time }}{% endif %}{% if event.location %}<br><i class="bi bi-geo-alt me-1"></i>{{ event.location }}{% endif %}</p>
+        {% if event.description %}<p class="my-4">{{ event.description }}</p>{% endif %}
+        <form method="POST" action="{{ url_for('register_for_event', event_id=event.id) }}">
+            <div class="mb-4"><label class="form-label fw-semibold" for="ticket-type">Ticket type</label><select class="form-select" id="ticket-type" name="ticket_type"><option value="Standard">Standard</option><option value="VIP">VIP</option></select></div>
+            <button class="btn btn-primary" type="submit">Register for this event <i class="bi bi-arrow-right ms-1"></i></button>
+        </form>
+    </div></div>
+</section>
+{% endblock %}
