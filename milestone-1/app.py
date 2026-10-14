@@ -28,6 +28,8 @@ GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 if not GEMINI_API_KEY:
     print("WARNING: GEMINI_API_KEY not set. Assistant will not work.")
 
+TICKET_TYPES = ('Standard', 'VIP', 'Speaker', 'Press')
+
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -603,7 +605,8 @@ def dashboard():
                            stats=stats,
                            my_registrations=user_regs,
                            recent_activities=recent_activities,
-                           recent_incidents=recent_incidents)
+                           recent_incidents=recent_incidents,
+                           ticket_types=TICKET_TYPES)
 
 @app.route('/profile')
 @login_required
@@ -624,8 +627,12 @@ def profile():
 @login_required
 def user_register_event():
     events = Event.query.filter_by(status='upcoming').order_by(Event.date.asc()).all()
+    event = None
+    selected_event_id = None
+    ticket_type = 'Standard'
     if request.method == 'POST':
         event_id = request.form.get('event_id', type=int)
+        selected_event_id = event_id
         ticket_type = request.form.get('ticket_type', 'Standard')
         if not event_id:
             flash('Please select an event.', 'danger')
@@ -635,7 +642,7 @@ def user_register_event():
                 flash('That event could not be found.', 'danger')
             elif event.status != 'upcoming':
                 flash('Registration is only available for upcoming events.', 'warning')
-            elif ticket_type not in {'Standard', 'VIP'}:
+            elif ticket_type not in TICKET_TYPES:
                 flash('Choose a valid ticket type.', 'danger')
             elif Registration.query.filter_by(user_id=current_user.id, event_id=event_id).first():
                 flash('You are already registered for this event.', 'warning')
@@ -647,17 +654,29 @@ def user_register_event():
                 db.session.commit()
                 flash('Successfully registered for the event!', 'success')
                 return redirect(url_for('dashboard'))
-    return render_template('user_register_event.html', events=events)
+    if event and all(available_event.id != event.id for available_event in events):
+        events.append(event)
+    return render_template('event_register.html',
+                           event=event,
+                           events=events,
+                           selected_event_id=event.id if event else selected_event_id,
+                           selected_ticket_type=ticket_type,
+                           ticket_types=TICKET_TYPES)
 
 @app.route('/event/<int:event_id>/register', methods=['GET', 'POST'])
 @login_required
 def register_for_event(event_id):
-    event = Event.query.get_or_404(event_id)
     if request.method == 'POST':
-        ticket_type = request.form.get('ticket_type', 'Standard')
+        event_id = request.form.get('event_id', type=int) or event_id
+    event = Event.query.get_or_404(event_id)
+    events = Event.query.filter_by(status='upcoming').order_by(Event.date.asc()).all()
+    if all(available_event.id != event.id for available_event in events):
+        events.append(event)
+    ticket_type = request.form.get('ticket_type', 'Standard')
+    if request.method == 'POST':
         if event.status != 'upcoming':
             flash('Registration is only available for upcoming events.', 'warning')
-        elif ticket_type not in {'Standard', 'VIP'}:
+        elif ticket_type not in TICKET_TYPES:
             flash('Choose a valid ticket type.', 'danger')
         elif Registration.query.filter_by(user_id=current_user.id, event_id=event_id).first():
             flash('You are already registered for this event.', 'warning')
@@ -669,13 +688,18 @@ def register_for_event(event_id):
             db.session.commit()
             flash('Successfully registered for the event!', 'success')
             return redirect(url_for('event_detail', event_id=event_id))
-    return render_template('event_register.html', event=event)
+    return render_template('event_register.html',
+                           event=event,
+                           events=events,
+                           selected_event_id=event.id,
+                           selected_ticket_type=ticket_type,
+                           ticket_types=TICKET_TYPES)
 
 @app.route('/user/registrations')
 @login_required
 def user_my_registrations():
     registrations = Registration.query.filter_by(user_id=current_user.id).all()
-    return render_template('user_registrations.html', registrations=registrations)
+    return render_template('user_registrations.html', registrations=registrations, ticket_types=TICKET_TYPES)
 # ----- EDIT & DELETE routes (already here) -----
 @app.route('/user/registrations/cancel/<int:reg_id>', methods=['POST'])
 @login_required
@@ -698,7 +722,7 @@ def edit_registration(reg_id):
     if reg.user_id != current_user.id:
         abort(403)
     new_ticket_type = request.form.get('ticket_type')
-    if new_ticket_type in {'Standard', 'VIP'}:
+    if new_ticket_type in TICKET_TYPES:
         reg.ticket_type = new_ticket_type
         db.session.commit()
         flash(f'Ticket type updated to "{new_ticket_type}".', 'success')
