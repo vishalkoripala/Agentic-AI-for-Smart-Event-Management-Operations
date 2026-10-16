@@ -72,9 +72,6 @@
     .activity-content { flex: 1; }
     .activity-content .activity-text { font-size: 0.95rem; margin-bottom: 0.1rem; }
     .activity-content .activity-time { font-size: 0.78rem; color: #6c757d; }
-    .bg-purple-subtle { background-color: #e9dff7; }
-    .text-purple { color: #6f42c1; }
-
     /* ---- My Registrations List ---- */
     .registration-item {
         display: flex;
@@ -141,7 +138,7 @@
                         </div>
                         <i class="bi bi-people stat-icon"></i>
                     </div>
-                    <div class="mt-2"><span class="stat-trend"><i class="bi bi-arrow-up-short"></i> 12%</span> vs last month</div>
+                    <div class="mt-2"><span class="stat-trend">All events</span></div>
                 </div>
             </div>
         </div>
@@ -193,8 +190,8 @@
     <div class="row g-4 mb-4">
         <div class="col-md-7">
             <div class="card chart-card h-100">
-                <div class="card-header"><i class="bi bi-graph-up text-primary me-2"></i>Agent Performance Scores</div>
-                <div class="card-body"><div class="chart-wrap"><canvas id="agentScoreChart"></canvas></div></div>
+                <div class="card-header"><i class="bi bi-graph-up text-primary me-2"></i>Registrations by Ticket Type</div>
+                <div class="card-body"><div class="chart-wrap"><canvas id="ticketTypeChart" aria-label="Registrations by ticket type"></canvas></div></div>
             </div>
         </div>
         <div class="col-md-5">
@@ -251,6 +248,7 @@
                                     </button>
                                     {% endif %}
                                     <form method="POST" action="{{ url_for('cancel_registration', reg_id=reg.id) }}" data-confirm="Cancel your registration for {{ reg.event.title if reg.event else 'this event' }}? This cannot be undone.">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn btn-outline-danger btn-action-sm" aria-label="Cancel registration">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -263,6 +261,7 @@
                                 <div class="modal-dialog modal-dialog-centered">
                                     <div class="modal-content">
                                         <form method="POST" action="{{ url_for('edit_registration', reg_id=reg.id) }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <div class="modal-header">
                                                 <h5 class="modal-title" id="editModalTitle{{ reg.id }}"><i class="bi bi-pencil-square text-warning"></i> Edit Ticket Type</h5>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -303,7 +302,7 @@
             <div class="card chart-card h-100">
                 <div class="card-header">
                     <i class="bi bi-clock text-warning me-2"></i>Recent Activity
-                    <span class="badge bg-secondary float-end">Live</span>
+                    <span class="badge bg-secondary float-end">Latest</span>
                 </div>
                 <div class="card-body p-3">
                     {% if recent_activities %}
@@ -368,6 +367,9 @@
 {% endblock %}
 
 {% block extra_js %}
+<div id="dashboard-chart-data" hidden
+     data-ticket-counts="{{ ticket_counts|tojson|forceescape }}"
+     data-registration-trend="{{ registration_trend|tojson|forceescape }}"></div>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Animate dashboard counters when they become visible.
@@ -405,17 +407,22 @@
             });
         });
 
-        if (typeof Chart === 'undefined') return;
+        const ChartConstructor = window['Chart'];
+        if (typeof ChartConstructor !== 'function') return;
 
-        const agentCanvas = document.getElementById('agentScoreChart');
-        if (agentCanvas) {
-            new Chart(agentCanvas.getContext('2d'), {
+        const chartData = document.getElementById('dashboard-chart-data');
+        const ticketCounts = JSON.parse(chartData.dataset.ticketCounts || '{"labels":[],"values":[]}');
+        const registrationTrend = JSON.parse(chartData.dataset.registrationTrend || '{"labels":[],"values":[]}');
+
+        const ticketCanvas = document.getElementById('ticketTypeChart');
+        if (ticketCanvas) {
+            new ChartConstructor(ticketCanvas.getContext('2d'), {
                 type: 'bar',
                 data: {
-                    labels: ['Registration', 'Venue', 'Speaker', 'Sponsorship', 'Incident'],
+                    labels: ticketCounts.labels,
                     datasets: [{
-                        label: 'Performance Score (%)',
-                        data: [92, 78, 85, 70, 88],
+                        label: 'Registrations',
+                        data: ticketCounts.values,
                         backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#6f42c1', '#dc3545'],
                         borderRadius: 8,
                         barThickness: 36
@@ -426,7 +433,7 @@
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0, 0, 0, 0.05)' } },
+                        y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: 'rgba(0, 0, 0, 0.05)' } },
                         x: { grid: { display: false } }
                     }
                 }
@@ -435,13 +442,13 @@
 
         const trendCanvas = document.getElementById('registrationTrendChart');
         if (trendCanvas) {
-            new Chart(trendCanvas.getContext('2d'), {
+            new ChartConstructor(trendCanvas.getContext('2d'), {
                 type: 'line',
                 data: {
-                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    labels: registrationTrend.labels,
                     datasets: [{
                         label: 'Registrations',
-                        data: [12, 19, 15, 22, 28, 24, 30],
+                        data: registrationTrend.values,
                         borderColor: '#198754',
                         backgroundColor: 'rgba(25, 135, 84, 0.1)',
                         fill: true,

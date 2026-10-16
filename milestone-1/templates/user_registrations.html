@@ -199,9 +199,13 @@
                                 <div class="registration-actions">
                                     {% if registration.event %}
                                     <a class="btn btn-outline-primary" href="{{ url_for('event_detail', event_id=registration.event.id) }}" aria-label="View {{ registration.event.title }}" title="View event"><i class="bi bi-eye"></i></a>
+                                    {% if registration.event.status == 'completed' %}
+                                    <a class="btn btn-outline-success" href="{{ url_for('feedback', event_id=registration.event.id) }}" aria-label="Leave feedback for {{ registration.event.title }}" title="Leave or update feedback"><i class="bi bi-chat-square-text"></i></a>
+                                    {% endif %}
                                     {% endif %}
                                     <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#editRegistration{{ registration.id }}" aria-label="Edit ticket type" title="Edit ticket type"><i class="bi bi-pencil"></i></button>
                                     <form method="POST" action="{{ url_for('cancel_registration', reg_id=registration.id) }}" onsubmit="return confirm('Cancel this event registration? This cannot be undone.');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn btn-outline-danger" aria-label="Cancel registration" title="Cancel registration"><i class="bi bi-trash"></i></button>
                                     </form>
                                 </div>
@@ -222,6 +226,7 @@
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <form method="POST" action="{{ url_for('edit_registration', reg_id=registration.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <div class="modal-header">
                                 <h2 class="modal-title fs-5" id="editRegistrationLabel{{ registration.id }}">Change ticket type</h2>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

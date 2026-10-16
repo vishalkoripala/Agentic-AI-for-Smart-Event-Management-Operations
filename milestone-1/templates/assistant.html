@@ -55,7 +55,10 @@
         try {
             const response = await fetch(shell.dataset.apiUrl, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+                },
                 body: JSON.stringify({message})
             });
             const result = await response.json();

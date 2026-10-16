@@ -2,11 +2,13 @@ import os
 import json
 import re
 import atexit
-from datetime import datetime, timezone
+import secrets
+from datetime import datetime, timedelta, timezone
 from typing import Any, ClassVar
-from flask import Flask, render_template, redirect, url_for, flash, request, abort, jsonify
+from flask import Flask, render_template, redirect, url_for, flash, request, abort, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 # noinspection PyPackageRequirements
 from werkzeug.security import generate_password_hash, check_password_hash
 import random
@@ -20,19 +22,67 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or os.urandom(32)
+APP_ENV = os.environ.get('APP_ENV', 'development').strip().lower()
+configured_secret_key = os.environ.get('SECRET_KEY', '').strip()
+if APP_ENV == 'production' and len(configured_secret_key) < 32:
+    raise RuntimeError('Set SECRET_KEY to a random value of at least 32 characters in production.')
+
+app.config['SECRET_KEY'] = configured_secret_key or secrets.token_urlsafe(32)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///eventops.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = APP_ENV == 'production'
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 if not GEMINI_API_KEY:
-    print("WARNING: GEMINI_API_KEY not set. Assistant will not work.")
+    app.logger.warning('GEMINI_API_KEY is not set; the AI assistant will be unavailable.')
 
 TICKET_TYPES = ('Standard', 'VIP', 'Speaker', 'Press')
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
+CSRF_SESSION_KEY = '_csrf_token'
+
+def _get_csrf_token():
+    token = session.get(CSRF_SESSION_KEY)
+    if token is None:
+        token = secrets.token_urlsafe(32)
+        session[CSRF_SESSION_KEY] = token
+    return token
+
+def _validate_csrf_token():
+    submitted_token = request.headers.get('X-CSRF-Token') or request.form.get('csrf_token', '')
+    expected_token = session.get(CSRF_SESSION_KEY, '')
+    if not submitted_token or not expected_token or not secrets.compare_digest(submitted_token, expected_token):
+        abort(400, description='Your form session expired. Refresh the page and try again.')
+
+@app.before_request
+def protect_state_changing_requests():
+    if request.method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
+        _validate_csrf_token()
+
+@app.context_processor
+def inject_csrf_token():
+    return {'csrf_token': _get_csrf_token}
+
+@app.context_processor
+def inject_notification_data():
+    if not current_user.is_authenticated:
+        return {'recent_notifications': [], 'unread_notification_count': 0}
+
+    notifications_query = Notification.query
+    if current_user.role != 'admin':
+        notifications_query = notifications_query.filter_by(user_id=current_user.id)
+    recent_notifications = notifications_query.order_by(Notification.sent_at.desc()).limit(5).all()
+    unread_notification_count = notifications_query.filter_by(read=False).count()
+    return {
+        'recent_notifications': recent_notifications,
+        'unread_notification_count': unread_notification_count,
+    }
 
 class BaseModel(db.Model):
     """Shared model base with Flask-SQLAlchemy's dynamic query descriptor typed."""
@@ -160,7 +210,10 @@ class ContactMessage(BaseModel):
 # ------------------ Login Loader ------------------
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    try:
+        return db.session.get(User, int(user_id))
+    except (TypeError, ValueError):
+        return None
 
 # ------------------ Gemini Assistant ------------------
 class GeminiAssistant:
@@ -237,18 +290,38 @@ class GeminiAssistant:
         try:
             if isinstance(remind_at, str):
                 remind_at = datetime.fromisoformat(remind_at.replace('Z', '+00:00'))
+            if not isinstance(remind_at, datetime):
+                return {'error': 'Choose a valid reminder date and time.'}
+            if remind_at.tzinfo is None:
+                remind_at = remind_at.replace(tzinfo=timezone.utc)
+            else:
+                remind_at = remind_at.astimezone(timezone.utc)
+            event = db.session.get(Event, int(event_id))
+            if not event:
+                return {'error': 'Event not found.'}
+            if event.status != 'upcoming':
+                return {'error': 'Reminders are only available for upcoming events.'}
+            if remind_at <= datetime.now(timezone.utc):
+                return {'error': 'Reminder time must be in the future.'}
+            if not isinstance(message, str) or not message.strip() or len(message) > 500:
+                return {'error': 'Reminder message must be between 1 and 500 characters.'}
             reminder = Reminder(
                 user_id=user_id,
-                event_id=event_id,
+                event_id=event.id,
                 remind_at=remind_at,
-                message=message,
+                message=message.strip(),
                 sent=False
             )
             db.session.add(reminder)
             db.session.commit()
             return {'success': True, 'reminder_id': reminder.id, 'scheduled_for': remind_at.isoformat()}
-        except Exception as e:
-            return {'error': str(e)}
+        except (TypeError, ValueError):
+            db.session.rollback()
+            return {'error': 'Choose a valid event and reminder date and time.'}
+        except SQLAlchemyError:
+            db.session.rollback()
+            app.logger.exception('Failed to schedule an event reminder.')
+            return {'error': 'The reminder could not be scheduled. Please try again.'}
 
     def _format_my_registrations(self):
         registrations = self.get_my_registrations(self.user_id)
@@ -269,7 +342,10 @@ class GeminiAssistant:
 
         # 2. Upcoming events
         if re.search(r'\b(upcoming events|show events|list events|what events are coming)\b', user_message, re.IGNORECASE):
-            events = self.get_events()
+            events = [
+                {'title': event.title, 'date': event.date, 'time': event.time, 'location': event.location}
+                for event in Event.query.filter_by(status='upcoming').order_by(Event.date.asc()).all()
+            ]
             if not events:
                 return "No events found."
             lines = [f"• {e['title']} on {e['date']} at {e['time']} ({e['location']})" for e in events]
@@ -309,6 +385,7 @@ class GeminiAssistant:
         IMPORTANT: NEVER ask the user for their user ID. The user ID is already known.
         Return ONLY the JSON object, no other text.
         """
+        # noinspection PyBroadException
         try:
             response = self.client.models.generate_content(
                 model=self.model,
@@ -318,8 +395,9 @@ class GeminiAssistant:
                     temperature=0.2,
                 )
             )
-        except Exception as e:
-            return f"❌ Gemini error: {str(e)}"
+        except Exception:
+            app.logger.exception('Gemini assistant request failed.')
+            return 'The assistant is temporarily unavailable. Please try again.'
 
         raw = (response.text or "").strip()
         if not raw:
@@ -347,6 +425,17 @@ class GeminiAssistant:
         if not isinstance(params, dict):
             return "I'm sorry, I couldn't understand that. Could you please rephrase?"
 
+        allowed_parameters = {
+            'get_events': set(),
+            'get_my_registrations': {'user_id'},
+            'get_event_details': {'event_id', 'event_name'},
+            'schedule_reminder': {'user_id', 'event_id', 'event_name', 'remind_at', 'message'},
+            'get_venues': set(),
+            'get_speakers': set(),
+            'answer': set(),
+        }
+        params = {key: value for key, value in params.items() if key in allowed_parameters.get(action, set())}
+
         if action == 'answer':
             msg = parsed.get('message', '')
             if not isinstance(msg, str):
@@ -360,11 +449,16 @@ class GeminiAssistant:
             return f"Sorry, I cannot perform '{action}' yet."
 
         if action in ['get_my_registrations', 'schedule_reminder']:
-            if 'user_id' not in params:
-                params['user_id'] = self.user_id
+            params['user_id'] = self.user_id
 
         if action in ['get_event_details', 'schedule_reminder']:
             event_name = params.get('event_name')
+            if event_name is not None:
+                if not isinstance(event_name, str):
+                    return 'Please provide the event name as text.'
+                event_name = event_name.strip()
+                if len(event_name) > 200:
+                    return 'Event names must be 200 characters or fewer.'
             if event_name:
                 event = Event.query.filter(Event.title.ilike(f'%{event_name}%')).first()
                 if event:
@@ -375,8 +469,25 @@ class GeminiAssistant:
                 del params['event_name']
             if 'event_id' not in params:
                 return "I need an event ID or name to proceed."
+            try:
+                params['event_id'] = int(params['event_id'])
+            except (TypeError, ValueError):
+                return 'I could not identify that event. Please provide its name or choose it from the event list.'
 
-        result = func(**params)
+        if action == 'schedule_reminder':
+            if not params.get('remind_at'):
+                return 'Please include when you want the reminder.'
+            if not isinstance(params.get('message'), str) or not params['message'].strip():
+                return 'Please include a short message for the reminder.'
+
+        try:
+            result = func(**params)
+        except (TypeError, ValueError):
+            return 'I could not process those details. Please check them and try again.'
+        except SQLAlchemyError:
+            db.session.rollback()
+            app.logger.exception('Assistant database action failed.')
+            return 'I could not access that information just now. Please try again.'
 
         if isinstance(result, list):
             if not result:
@@ -405,7 +516,7 @@ class GeminiAssistant:
 def process_reminders():
     with app.app_context():
         now = datetime.now(timezone.utc)
-        reminders = Reminder.query.filter(Reminder.remind_at <= now, Reminder.sent == False).all()
+        reminders = Reminder.query.filter(Reminder.remind_at <= now, Reminder.sent.is_(False)).all()
         for reminder in reminders:
             user = db.session.get(User, reminder.user_id)
             if user:
@@ -424,13 +535,38 @@ def process_reminders():
 
 # Start background scheduler
 scheduler = BackgroundScheduler()
-scheduler.add_job(func=process_reminders, trigger="interval", seconds=60)
-scheduler.start()
-atexit.register(lambda: scheduler.shutdown())
+scheduler.add_job(
+    func=process_reminders,
+    trigger='interval',
+    seconds=60,
+    id='process_reminders',
+    max_instances=1,
+    coalesce=True,
+)
+debug_mode = os.environ.get('FLASK_DEBUG', '').lower() in {'1', 'true'}
+if not debug_mode or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    scheduler.start()
+    atexit.register(lambda: scheduler.shutdown(wait=False))
 
 # ------------------ Helper: Mock Data Generation ------------------
 def init_db():
     if User.query.count() == 0:
+        if APP_ENV == 'production':
+            admin_name = os.environ.get('ADMIN_NAME', 'Administrator').strip() or 'Administrator'
+            admin_email = os.environ.get('ADMIN_EMAIL', '').strip().lower()
+            admin_password = os.environ.get('ADMIN_PASSWORD', '')
+            if (
+                not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+', admin_email)
+                or len(admin_email) > 100
+                or len(admin_password) < 12
+            ):
+                raise RuntimeError('Set valid ADMIN_EMAIL and an ADMIN_PASSWORD of at least 12 characters in production.')
+            admin = User(name=admin_name[:100], email=admin_email, role='admin')
+            admin.set_password(admin_password)
+            db.session.add(admin)
+            db.session.commit()
+            return
+
         admin = User(name='Admin User', email='admin@eventops.com', role='admin')
         admin.set_password('admin123')
         user = User(name='Regular User', email='user@eventops.com', role='user')
@@ -439,13 +575,14 @@ def init_db():
         db.session.commit()
 
         # --- Create Events ---
+        today = datetime.now(timezone.utc).date()
         events = [
             Event(title='AI Summit 2026', description='The future of AI in business',
-                  date='2026-07-10', time='09:00 AM', location='Main Hall', capacity=200, status='upcoming'),
+                  date=(today + timedelta(days=7)).isoformat(), time='09:00 AM', location='Main Hall', capacity=200, status='upcoming'),
             Event(title='Hackathon Night', description='24-hour coding challenge',
-                  date='2026-07-15', time='06:00 PM', location='Room B', capacity=50, status='upcoming'),
+                  date=(today + timedelta(days=12)).isoformat(), time='06:00 PM', location='Room B', capacity=50, status='upcoming'),
             Event(title='Sponsor Meet & Greet', description='Networking with sponsors',
-                  date='2026-07-20', time='11:00 AM', location='Exhibition Hall', capacity=100, status='upcoming'),
+                  date=(today + timedelta(days=17)).isoformat(), time='11:00 AM', location='Exhibition Hall', capacity=100, status='upcoming'),
         ]
         for e in events:
             db.session.add(e)
@@ -477,8 +614,8 @@ def init_db():
             ('Prof. Lee', 'Data Scientist', 'Data Ethics', 'Day 1 11:00'),
             ('Ms. Jones', 'Event Manager', 'Operational Excellence', 'Day 2 10:00')
         ]
-        for name, bio, session, schedule in speakers:
-            db.session.add(Speaker(name=name, bio=bio, session_title=session, schedule=schedule))
+        for name, bio, session_title, schedule in speakers:
+            db.session.add(Speaker(name=name, bio=bio, session_title=session_title, schedule=schedule))
         # --- Sponsorships ---
         sponsors = [
             ('Acme Corp', '$50k', 'Logo + booth', 85, 1.2),
@@ -529,6 +666,9 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
+        if len(password) > 128:
+            flash('Passwords must be 128 characters or fewer.', 'danger')
+            return render_template('login.html')
         user = User.query.filter_by(email=email).first() if email else None
         if isinstance(user, User) and password and user.check_password(password):
             login_user(user)
@@ -537,12 +677,24 @@ def login():
         flash('Invalid email or password', 'danger')
     return render_template('login.html')
 
-@app.route('/logout')
+@app.route('/logout', methods=['POST'])
 @login_required
 def logout():
     logout_user()
     flash('Logged out', 'info')
     return redirect(url_for('index'))
+
+@app.route('/notifications/<int:notification_id>/read', methods=['POST'])
+@login_required
+def mark_notification_read(notification_id):
+    notification = db.session.get(Notification, notification_id)
+    if not notification:
+        abort(404)
+    if notification.user_id != current_user.id and current_user.role != 'admin':
+        abort(403)
+    notification.read = True
+    db.session.commit()
+    return redirect(url_for('admin_notifications') if current_user.role == 'admin' else url_for('dashboard'))
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -562,6 +714,8 @@ def register():
             flash('Enter a valid email address.', 'danger')
         elif len(password) < 8:
             flash('Choose a password with at least 8 characters.', 'danger')
+        elif len(password) > 128:
+            flash('Choose a password with 128 characters or fewer.', 'danger')
         elif password != confirm_password:
             flash('The passwords do not match.', 'danger')
         elif User.query.filter_by(email=email).first():
@@ -570,21 +724,82 @@ def register():
             user = User(name=name, email=email, role='user')
             user.set_password(password)
             db.session.add(user)
-            db.session.commit()
+            try:
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                flash('Email already registered', 'danger')
+                return render_template('register.html')
             flash('Registration successful! Please login.', 'success')
             return redirect(url_for('login'))
     return render_template('register.html')
 
+def _as_utc(value):
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _time_ago(value, now=None):
+    now = now or datetime.now(timezone.utc)
+    seconds = max(0, int((now - _as_utc(value)).total_seconds()))
+    if seconds < 60:
+        return f'{seconds}s ago'
+    if seconds < 3600:
+        return f'{seconds // 60}m ago'
+    if seconds < 86400:
+        return f'{seconds // 3600}h ago'
+    return f'{seconds // 86400}d ago'
+
+
+def _registration_analytics(user_id=None):
+    today = datetime.now(timezone.utc).date()
+    days = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
+    start = datetime.combine(days[0], datetime.min.time(), tzinfo=timezone.utc)
+    end = datetime.combine(today + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
+    registrations_query = Registration.query.filter(
+        Registration.status == 'registered',
+        Registration.registered_at >= start,
+        Registration.registered_at < end,
+    )
+    ticket_counts_query = Registration.query.filter_by(status='registered')
+    if user_id is not None:
+        registrations_query = registrations_query.filter_by(user_id=user_id)
+        ticket_counts_query = ticket_counts_query.filter_by(user_id=user_id)
+    registrations = registrations_query.all()
+
+    daily_counts = {day: 0 for day in days}
+    for registration in registrations:
+        if registration.registered_at:
+            registered_day = _as_utc(registration.registered_at).date()
+            if registered_day in daily_counts:
+                daily_counts[registered_day] += 1
+
+    ticket_counts = {
+        'labels': list(TICKET_TYPES),
+        'values': [
+            ticket_counts_query.filter_by(ticket_type=ticket_type).count()
+            for ticket_type in TICKET_TYPES
+        ],
+    }
+    registration_trend = {
+        'labels': [day.strftime('%a %d %b') for day in days],
+        'values': [daily_counts[day] for day in days],
+    }
+    return ticket_counts, registration_trend
+
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
+    now = datetime.now(timezone.utc)
     stats = {
-        'registrations': Registration.query.count(),
+        'registrations': Registration.query.filter_by(status='registered').count(),
         'venues': Venue.query.count(),
         'speakers': Speaker.query.count(),
         'sponsorships': Sponsorship.query.count(),
     }
-    user_regs = Registration.query.filter_by(user_id=current_user.id).all()
+    user_regs = Registration.query.filter_by(user_id=current_user.id, status='registered').all()
     my_reg_count = len(user_regs)
     checked_in_count = sum(1 for r in user_regs if r.checked_in)
     upcoming_events_count = Event.query.filter(Event.status == 'upcoming').count()
@@ -593,20 +808,58 @@ def dashboard():
     stats['checked_in'] = checked_in_count
     stats['upcoming_events'] = upcoming_events_count
 
-    recent_incidents = Incident.query.order_by(Incident.reported_at.desc()).limit(5).all()
+    analytics_user_id = None if current_user.role == 'admin' else current_user.id
+    ticket_counts, registration_trend = _registration_analytics(user_id=analytics_user_id)
+    activity_query = Registration.query.filter_by(status='registered').order_by(Registration.registered_at.desc())
+    if current_user.role != 'admin':
+        activity_query = activity_query.filter_by(user_id=current_user.id)
+    activity_records = []
+    for registration in activity_query.limit(5).all():
+        if not registration.registered_at:
+            continue
+        event_title = registration.event.title if registration.event else 'an unavailable event'
+        if current_user.role == 'admin':
+            user_name = registration.user.name if registration.user else 'An attendee'
+            activity_text = f'{user_name} registered for {event_title}'
+        else:
+            activity_text = f'You registered for {event_title}'
+        activity_records.append({
+            'timestamp': _as_utc(registration.registered_at),
+            'icon': 'person-plus',
+            'color': 'primary',
+            'text': activity_text,
+        })
+
+    recent_incidents = []
+    if current_user.role == 'admin':
+        recent_incidents = Incident.query.order_by(Incident.reported_at.desc()).limit(5).all()
+        for incident in recent_incidents:
+            if incident.reported_at:
+                activity_records.append({
+                    'timestamp': _as_utc(incident.reported_at),
+                    'icon': 'exclamation-triangle',
+                    'color': 'danger',
+                    'text': f'Incident reported: {incident.title}',
+                })
+
+    activity_records.sort(key=lambda activity: activity['timestamp'], reverse=True)
     recent_activities = [
-        {'icon': 'person-plus', 'color': 'primary', 'text': 'John Doe registered for AI Summit 2026', 'time': '5 min ago'},
-        {'icon': 'building', 'color': 'success', 'text': 'Main Hall venue utilization updated to 78%', 'time': '18 min ago'},
-        {'icon': 'mic', 'color': 'warning', 'text': 'Dr. Smith\'s session rescheduled to 2:00 PM', 'time': '1 hour ago'},
-        {'icon': 'trophy', 'color': 'purple', 'text': 'Acme Corp sponsorship deliverables completed', 'time': '2 hours ago'},
-        {'icon': 'exclamation-triangle', 'color': 'danger', 'text': 'Wi-Fi outage incident resolved', 'time': '3 hours ago'},
+        {
+            'icon': activity['icon'],
+            'color': activity['color'],
+            'text': activity['text'],
+            'time': _time_ago(activity['timestamp'], now),
+        }
+        for activity in activity_records[:5]
     ]
     return render_template('dashboard.html',
                            stats=stats,
                            my_registrations=user_regs,
                            recent_activities=recent_activities,
                            recent_incidents=recent_incidents,
-                           ticket_types=TICKET_TYPES)
+                           ticket_types=TICKET_TYPES,
+                           ticket_counts=ticket_counts,
+                           registration_trend=registration_trend)
 
 @app.route('/profile')
 @login_required
@@ -654,12 +907,12 @@ def user_register_event():
                 db.session.commit()
                 flash('Successfully registered for the event!', 'success')
                 return redirect(url_for('dashboard'))
-    if event and all(available_event.id != event.id for available_event in events):
+    if event is not None and all(available_event.id != selected_event_id for available_event in events):
         events.append(event)
-    return render_template('event_register.html',
+    return render_template('user_register_event.html',
                            event=event,
                            events=events,
-                           selected_event_id=event.id if event else selected_event_id,
+                           selected_event_id=selected_event_id,
                            selected_ticket_type=ticket_type,
                            ticket_types=TICKET_TYPES)
 
@@ -757,6 +1010,9 @@ def assistant_api():
     user_message = payload.get('message')
     if not isinstance(user_message, str) or not user_message.strip():
         return jsonify({'error': 'Message is required'}), 400
+    user_message = user_message.strip()
+    if len(user_message) > 2000:
+        return jsonify({'error': 'Messages must be 2,000 characters or fewer.'}), 400
     if not GEMINI_API_KEY:
         return jsonify({'error': 'Assistant is unavailable until GEMINI_API_KEY is configured.'}), 503
 
@@ -1155,60 +1411,29 @@ def admin_incident_delete(incident_id):
 def admin_intelligence():
     if current_user.role != 'admin':
         abort(403)
-    now = datetime.now()
-    context = {
-        'health_score': 85,
-        'last_updated': now.strftime('%H:%M:%S'),
-        'active_agents': 5,
-        'total_agents': 5,
-        'open_incidents': 2,
-        'resolved_incidents': 12,
-        'total_registrations': 340,
-        'checked_in': 287,
-        'avg_response_time': 1.4,
-        'response_trend': -5,
-        'upcoming_sessions': 3,
-        'next_session_time': '2:30 PM',
-        'sponsor_roi': 78,
-        'sponsor_count': 6,
-        'task_completion': 92,
-        'tasks_completed': 184,
-        'tasks_total': 200,
-        'agent_scores': {
-            'Registration': 92,
-            'Venue': 78,
-            'Speaker': 65,
-            'Sponsorship': 88,
-            'Incident': 55
-        },
-        'agents': [
-            {'name': 'Registration', 'status': 'active', 'score': 92,
-             'tasks_processed': 345, 'success_rate': 97,
-             'last_activity': '10:32', 'uptime': '12h 14m',
-             'memory': '128 MB', 'cpu': '12%'},
-            {'name': 'Venue', 'status': 'active', 'score': 78,
-             'tasks_processed': 210, 'success_rate': 91,
-             'last_activity': '10:15', 'uptime': '12h 05m',
-             'memory': '96 MB', 'cpu': '8%'},
-            {'name': 'Speaker', 'status': 'idle', 'score': 65,
-             'tasks_processed': 89, 'success_rate': 85,
-             'last_activity': '09:45', 'uptime': '11h 30m',
-             'memory': '64 MB', 'cpu': '3%'},
-            {'name': 'Sponsorship', 'status': 'active', 'score': 88,
-             'tasks_processed': 156, 'success_rate': 94,
-             'last_activity': '10:20', 'uptime': '12h 10m',
-             'memory': '80 MB', 'cpu': '7%'},
-            {'name': 'Incident', 'status': 'active', 'score': 55,
-             'tasks_processed': 67, 'success_rate': 72,
-             'last_activity': '10:00', 'uptime': '11h 45m',
-             'memory': '112 MB', 'cpu': '15%'},
-        ],
-        'health_trend': {
-            'labels': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-            'values': [82, 84, 80, 78, 83, 85, 85]
-        },
-    }
-    return render_template('admin_intelligence.html', **context)
+    ticket_counts, registration_trend = _registration_analytics()
+    total_registrations = Registration.query.filter_by(status='registered').count()
+    checked_in = Registration.query.filter_by(status='registered', checked_in=True).count()
+    open_incidents = Incident.query.filter(Incident.status != 'resolved').count()
+    incidents_by_priority = [
+        {
+            'priority': priority.title(),
+            'count': Incident.query.filter_by(priority=priority).filter(Incident.status != 'resolved').count(),
+        }
+        for priority in ('high', 'medium', 'low')
+    ]
+    return render_template(
+        'admin_intelligence.html',
+        last_updated=datetime.now(timezone.utc).strftime('%H:%M:%S UTC'),
+        upcoming_events=Event.query.filter_by(status='upcoming').count(),
+        check_in_rate=round((checked_in / total_registrations) * 100) if total_registrations else 0,
+        checked_in=checked_in,
+        total_registrations=total_registrations,
+        open_incidents=open_incidents,
+        incidents_by_priority=incidents_by_priority,
+        ticket_counts=ticket_counts,
+        registration_trend=registration_trend,
+    )
 
 @app.route('/admin/notifications')
 @login_required
@@ -1270,12 +1495,21 @@ def admin_contact_messages():
 @login_required
 def feedback(event_id):
     event = Event.query.get_or_404(event_id)
+    registration = Registration.query.filter_by(user_id=current_user.id, event_id=event_id).first()
+    if not registration:
+        abort(403)
+    if event.status != 'completed':
+        flash('Feedback is available after the event is completed.', 'info')
+        return redirect(url_for('event_detail', event_id=event_id))
     existing = Feedback.query.filter_by(user_id=current_user.id, event_id=event_id).first()
     if request.method == 'POST':
         rating = request.form.get('rating', type=int)
         comment = request.form.get('comment', '').strip()
         if not rating or rating < 1 or rating > 5:
             flash('Please select a rating (1-5).', 'danger')
+            return render_template('feedback.html', event=event, existing=existing)
+        if len(comment) > 3000:
+            flash('Please keep your comment to 3,000 characters or fewer.', 'danger')
             return render_template('feedback.html', event=event, existing=existing)
         if existing:
             existing.rating = rating
@@ -1331,6 +1565,10 @@ def contact():
 def about():
     return render_template('about.html', now=datetime.now(timezone.utc))
 
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
 # ------------------ Main ------------------
 with app.app_context():
     db.create_all()
@@ -1340,5 +1578,5 @@ if __name__ == '__main__':
     app.run(
         host=os.environ.get('HOST', '127.0.0.1'),
         port=int(os.environ.get('PORT', '5000')),
-        debug=os.environ.get('FLASK_DEBUG', '').lower() in {'1', 'true'}
+        debug=APP_ENV != 'production' and debug_mode
     )

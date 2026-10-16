@@ -312,7 +312,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="register-password">Password</label>
-                        <input class="form-control" type="password" id="register-password" name="password" minlength="8" autocomplete="new-password" placeholder="At least 8 characters" required>
+                        <input class="form-control" type="password" id="register-password" name="password" minlength="8" maxlength="128" autocomplete="new-password" placeholder="At least 8 characters" required>
                         <div class="password-strength">
                             <div class="password-strength-track" id="register-password-meter" data-strength="empty" role="meter" aria-label="Password strength" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0" aria-valuetext="Not rated">
                                 <span></span><span></span><span></span>
@@ -323,7 +323,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="register-confirm-password">Confirm password</label>
-                        <input class="form-control" type="password" id="register-confirm-password" name="confirm_password" minlength="8" autocomplete="new-password" placeholder="Enter your password again" required>
+                        <input class="form-control" type="password" id="register-confirm-password" name="confirm_password" minlength="8" maxlength="128" autocomplete="new-password" placeholder="Enter your password again" required>
                     </div>
                     <button class="btn btn-primary auth-submit w-100" type="submit">Create account <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i></button>
                 </form>

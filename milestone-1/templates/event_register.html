@@ -134,6 +134,7 @@
         <div class="event-register-body">
             {% if events %}
             <form id="event-registration-form" method="POST" action="{{ url_for('register_for_event', event_id=event.id) if event else url_for('user_register_event') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="mb-2">
                     <label class="form-label event-register-label" for="event-select">Select Event</label>
                     <select class="form-select event-register-select" id="event-select" name="event_id" required>
@@ -169,14 +170,22 @@
                     </div>
                 </div>
 
-                <fieldset class="ticket-fieldset">
+                <fieldset class="ticket-fieldset" data-selected-ticket="{{ selected_ticket_type or 'Standard' }}">
                     <legend><i class="bi bi-ticket-perforated me-1" aria-hidden="true"></i>Choose Ticket Type</legend>
                     <div class="ticket-options">
                         {% set ticket_icons = {'Standard': 'ticket-perforated', 'VIP': 'star-fill', 'Speaker': 'mic-fill', 'Press': 'newspaper'} %}
                         {% set ticket_classes = {'Standard': 'ticket-standard', 'VIP': 'ticket-vip', 'Speaker': 'ticket-speaker', 'Press': 'ticket-press'} %}
-                        {% for ticket_type in ticket_types %}
+                        {% set default_ticket_type = ticket_types[0] %}
                         <div>
-                            <input class="ticket-radio visually-hidden" type="radio" id="ticket-{{ loop.index }}" name="ticket_type" value="{{ ticket_type }}" {% if (selected_ticket_type or 'Standard') == ticket_type %}checked{% endif %} required>
+                            <input class="ticket-radio visually-hidden" type="radio" id="ticket-default" name="ticket_type" value="{{ default_ticket_type }}" checked required>
+                            <label class="ticket-tile {{ ticket_classes[default_ticket_type] }}" for="ticket-default">
+                                <i class="bi bi-{{ ticket_icons[default_ticket_type] }}" aria-hidden="true"></i>
+                                <span class="ticket-name">{{ default_ticket_type }}</span>
+                            </label>
+                        </div>
+                        {% for ticket_type in ticket_types[1:] %}
+                        <div>
+                            <input class="ticket-radio visually-hidden" type="radio" id="ticket-{{ loop.index }}" name="ticket_type" value="{{ ticket_type }}" required>
                             <label class="ticket-tile {{ ticket_classes[ticket_type] }}" for="ticket-{{ loop.index }}">
                                 <i class="bi bi-{{ ticket_icons[ticket_type] }}" aria-hidden="true"></i>
                                 <span class="ticket-name">{{ ticket_type }}</span>
@@ -214,6 +223,16 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        const ticketFieldset = document.querySelector('.ticket-fieldset');
+        const selectedTicket = ticketFieldset?.dataset.selectedTicket;
+        const ticketInputs = ticketFieldset?.querySelectorAll('input[name="ticket_type"]') || [];
+        for (const ticketInput of ticketInputs) {
+            if (ticketInput.value === selectedTicket) {
+                ticketInput.checked = true;
+                break;
+            }
+        }
+
         const eventSelect = document.getElementById('event-select');
         if (!eventSelect) return;
 

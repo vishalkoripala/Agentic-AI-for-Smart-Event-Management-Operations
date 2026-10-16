@@ -168,6 +168,9 @@
                                 <i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i>
                                 You're registered.
                                 <a href="{{ url_for('user_my_registrations') }}" class="alert-link">View registrations</a>
+                                {% if event.status == 'completed' %}
+                                    <br><a href="{{ url_for('feedback', event_id=event.id) }}" class="alert-link">Leave or update feedback</a>
+                                {% endif %}
                             </div>
                         {% elif event.status == 'upcoming' and is_full %}
                             <div class="alert alert-warning event-detail-message">This event has reached capacity.</div>
@@ -176,6 +179,10 @@
                         {% else %}
                             <div class="alert alert-secondary event-detail-message">Registration is not available for this event.</div>
                         {% endif %}
+                        <p class="mt-3 mb-0 text-center text-muted small">
+                            Learn how we handle account and registration information in our
+                            <a href="{{ url_for('privacy') }}">Privacy Policy</a>.
+                        </p>
                     </aside>
                 </div>
             </div>
