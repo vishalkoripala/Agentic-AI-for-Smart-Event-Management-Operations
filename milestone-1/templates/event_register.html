@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Register for an Event | EventOps AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .event-register-shell {
+        min-height: calc(100vh - 160px);
+        margin: -1.5rem -12px;
+        padding: clamp(2rem, 5vw, 3.5rem) 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f3f5ff 0%, #eeefff 100%);
+    }
+    .event-register-card {
+        width: min(100%, 420px);
+        overflow: hidden;
+        border: 0;
+        border-radius: 1.3rem;
+        background: #fff;
+        box-shadow: 0 1.25rem 3.5rem rgba(37, 50, 110, 0.14);
+    }
+    .event-register-header {
+        padding: 1.25rem 1.25rem 1.1rem;
+        color: #fff;
+        text-align: center;
+        background: linear-gradient(115deg, #0d6efd 0%, #5d1eea 100%);
+    }
+    .event-register-header .header-icon {
+        display: inline-grid;
+        width: 2.5rem;
+        height: 2.5rem;
+        margin-bottom: 0.4rem;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        border-radius: 0.75rem;
+        background: rgba(255, 255, 255, 0.14);
+        font-size: 1.25rem;
+    }
+    .event-register-header h1 { margin: 0; font-size: 1.35rem; font-weight: 700; }
+    .event-register-header p { margin: 0.25rem 0 0; color: rgba(255, 255, 255, 0.84); font-size: 0.82rem; }
+    .event-register-body { padding: 1.1rem 1.25rem 1.2rem; }
+    .event-register-label { margin-bottom: 0.4rem; font-size: 0.82rem; font-weight: 650; }
+    .event-register-select { min-height: 2.65rem; border-color: #e2e5ee; border-radius: 0.7rem; font-size: 0.88rem; }
+    .event-register-select:focus { border-color: #86b7fe; box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.14); }
+    .event-preview {
+        min-height: 3.15rem;
+        margin: 0.75rem 0 1rem;
+        padding: 0.65rem 0.8rem;
+        display: flex;
+        align-items: center;
+        border: 1px solid #eceef4;
+        border-radius: 0.75rem;
+        background: #fafbfe;
+    }
+    .event-preview-empty { width: 100%; color: #7b8494; text-align: center; font-size: 0.78rem; }
+    .event-preview-empty i { margin-right: 0.3rem; }
+    .event-preview-details { width: 100%; }
+    .event-preview-title { margin-bottom: 0.3rem; color: #273248; font-size: 0.86rem; font-weight: 700; }
+    .event-preview-meta { display: flex; flex-wrap: wrap; gap: 0.25rem 0.8rem; color: #758094; font-size: 0.73rem; }
+    .event-preview-meta span { display: inline-flex; align-items: center; gap: 0.25rem; }
+    .event-preview-description { margin: 0.4rem 0 0; color: #667085; font-size: 0.76rem; line-height: 1.4; }
+    .ticket-fieldset { margin: 0 0 0.9rem; padding: 0; border: 0; }
+    .ticket-fieldset legend { margin-bottom: 0.45rem; font-size: 0.83rem; font-weight: 700; }
+    .ticket-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.4rem; }
+    .ticket-radio:checked + .ticket-tile {
+        border-color: #0d6efd;
+        background: #f0f6ff;
+        box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.12);
+    }
+    .ticket-radio:focus-visible + .ticket-tile { outline: 3px solid rgba(13, 110, 253, 0.35); outline-offset: 2px; }
+    .ticket-tile {
+        min-height: 74px;
+        padding: 0.5rem 0.2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.3rem;
+        border: 1px solid #e0e3eb;
+        border-radius: 0.7rem;
+        color: #344054;
+        background: #fff;
+        cursor: pointer;
+        transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    }
+    .ticket-tile:hover { transform: translateY(-2px); border-color: #9bbcfb; }
+    .ticket-tile i { font-size: 1.1rem; }
+    .ticket-tile .ticket-name { font-size: 0.72rem; font-weight: 650; }
+    .ticket-standard i { color: #0d6efd; }
+    .ticket-vip i { color: #f0b400; }
+    .ticket-speaker i { color: #20b8c4; }
+    .ticket-press i { color: #667085; }
+    .event-submit {
+        width: 100%;
+        padding: 0.65rem 1rem;
+        border: 0;
+        border-radius: 999px;
+        color: #fff;
+        font-size: 0.87rem;
+        font-weight: 650;
+        background: linear-gradient(110deg, #0d6efd 0%, #5d1eea 100%);
+        box-shadow: 0 0.35rem 0.9rem rgba(68, 76, 210, 0.2);
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .event-submit:hover { transform: translateY(-1px); color: #fff; box-shadow: 0 0.6rem 1.1rem rgba(68, 76, 210, 0.27); }
+    .event-submit:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+    .event-submit:focus-visible { outline: 3px solid rgba(13, 110, 253, 0.35); outline-offset: 3px; }
+    .event-register-notice { margin: 0; padding: 0.7rem 0.8rem; border-radius: 0.75rem; font-size: 0.82rem; }
+    .event-register-back { display: block; margin-top: 0.75rem; color: #727d90; text-align: center; font-size: 0.77rem; text-decoration: none; }
+    .event-register-back:hover { color: #0d6efd; }
+
+    @media (max-width: 380px) {
+        .event-register-body { padding: 1rem; }
+        .ticket-options { gap: 0.3rem; }
+        .ticket-tile .ticket-name { font-size: 0.67rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set is_full = event and event.capacity is not none and event.registrations|length >= event.capacity %}
+{% set current_registration = (event.registrations|selectattr('user_id', 'equalto', current_user.id)|first) if event else none %}
+{% set selected_option = events|selectattr('id', 'equalto', selected_event_id)|first %}
+<section class="event-register-shell">
+    <article class="event-register-card">
+        <header class="event-register-header">
+            <span class="header-icon" aria-hidden="true"><i class="bi bi-calendar-plus"></i></span>
+            <h1>Register for an Event</h1>
+            <p>Secure your spot at the next big event.</p>
+        </header>
+
+        <div class="event-register-body">
+            {% if events %}
+            <form id="event-registration-form" method="POST" action="{{ url_for('register_for_event', event_id=event.id) if event else url_for('user_register_event') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-2">
+                    <label class="form-label event-register-label" for="event-select">Select Event</label>
+                    <select class="form-select event-register-select" id="event-select" name="event_id" required>
+                        <option value="" disabled {% if not selected_option %}selected{% endif %}>-- Choose an event --</option>
+                        {% for available_event in events %}
+                        <option value="{{ available_event.id }}"
+                                data-register-url="{{ url_for('register_for_event', event_id=available_event.id) }}"
+                                data-detail-url="{{ url_for('event_detail', event_id=available_event.id) }}"
+                                data-title="{{ available_event.title }}"
+                                data-date="{{ available_event.date or '' }}"
+                                data-time="{{ available_event.time or '' }}"
+                                data-location="{{ available_event.location or '' }}"
+                                data-description="{{ available_event.description or '' }}"
+                                {% if available_event.id == selected_event_id %}selected{% endif %}>
+                            {{ available_event.title }}{% if available_event.date %} · {{ available_event.date }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="event-preview" aria-live="polite">
+                    <div class="event-preview-empty" id="event-preview-empty" {% if selected_option %}hidden{% endif %}>
+                        <i class="bi bi-info-circle" aria-hidden="true"></i>Select an event to see details
+                    </div>
+                    <div class="event-preview-details" id="event-preview-details" {% if not selected_option %}hidden{% endif %}>
+                        <div class="event-preview-title" id="event-preview-title">{{ event.title if event else '' }}</div>
+                        <div class="event-preview-meta">
+                            <span id="event-preview-date-wrap" {% if not event or not event.date %}hidden{% endif %}><i class="bi bi-calendar3" aria-hidden="true"></i><span id="event-preview-date">{{ event.date if event and event.date else '' }}</span></span>
+                            <span id="event-preview-time-wrap" {% if not event or not event.time %}hidden{% endif %}><i class="bi bi-clock" aria-hidden="true"></i><span id="event-preview-time">{{ event.time if event and event.time else '' }}</span></span>
+                            <span id="event-preview-location-wrap" {% if not event or not event.location %}hidden{% endif %}><i class="bi bi-geo-alt" aria-hidden="true"></i><span id="event-preview-location">{{ event.location if event and event.location else '' }}</span></span>
+                        </div>
+                        <p class="event-preview-description" id="event-preview-description" {% if not event or not event.description %}hidden{% endif %}>{{ event.description if event and event.description else '' }}</p>
+                    </div>
+                </div>
+
+                <fieldset class="ticket-fieldset" data-selected-ticket="{{ selected_ticket_type or 'Standard' }}">
+                    <legend><i class="bi bi-ticket-perforated me-1" aria-hidden="true"></i>Choose Ticket Type</legend>
+                    <div class="ticket-options">
+                        {% set ticket_icons = {'Standard': 'ticket-perforated', 'VIP': 'star-fill', 'Speaker': 'mic-fill', 'Press': 'newspaper'} %}
+                        {% set ticket_classes = {'Standard': 'ticket-standard', 'VIP': 'ticket-vip', 'Speaker': 'ticket-speaker', 'Press': 'ticket-press'} %}
+                        {% set default_ticket_type = ticket_types[0] %}
+                        <div>
+                            <input class="ticket-radio visually-hidden" type="radio" id="ticket-default" name="ticket_type" value="{{ default_ticket_type }}" checked required>
+                            <label class="ticket-tile {{ ticket_classes[default_ticket_type] }}" for="ticket-default">
+                                <i class="bi bi-{{ ticket_icons[default_ticket_type] }}" aria-hidden="true"></i>
+                                <span class="ticket-name">{{ default_ticket_type }}</span>
+                            </label>
+                        </div>
+                        {% for ticket_type in ticket_types[1:] %}
+                        <div>
+                            <input class="ticket-radio visually-hidden" type="radio" id="ticket-{{ loop.index }}" name="ticket_type" value="{{ ticket_type }}" required>
+                            <label class="ticket-tile {{ ticket_classes[ticket_type] }}" for="ticket-{{ loop.index }}">
+                                <i class="bi bi-{{ ticket_icons[ticket_type] }}" aria-hidden="true"></i>
+                                <span class="ticket-name">{{ ticket_type }}</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+
+                {% if current_registration %}
+                    <div class="alert alert-success event-register-notice">
+                        <i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i>You are already registered.
+                        <a href="{{ url_for('user_my_registrations') }}" class="alert-link">View registrations</a>
+                    </div>
+                {% elif event and event.status != 'upcoming' %}
+                    <div class="alert alert-secondary event-register-notice">Registration is not available for this event.</div>
+                {% elif is_full %}
+                    <div class="alert alert-warning event-register-notice">This event has reached capacity.</div>
+                {% else %}
+                    <button class="event-submit" type="submit"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Register Now</button>
+                {% endif %}
+            </form>
+            {% else %}
+                <div class="alert alert-info event-register-notice">There are no events open for registration right now.</div>
+            {% endif %}
+
+            <a class="event-register-back" id="event-register-back" href="{{ url_for('event_detail', event_id=event.id) if event else url_for('browse_events') }}">
+                <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Cancel and go back
+            </a>
+        </div>
+    </article>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const ticketFieldset = document.querySelector('.ticket-fieldset');
+        const selectedTicket = ticketFieldset?.dataset.selectedTicket;
+        const ticketInputs = ticketFieldset?.querySelectorAll('input[name="ticket_type"]') || [];
+        for (const ticketInput of ticketInputs) {
+            if (ticketInput.value === selectedTicket) {
+                ticketInput.checked = true;
+                break;
+            }
+        }
+
+        const eventSelect = document.getElementById('event-select');
+        if (!eventSelect) return;
+
+        const form = document.getElementById('event-registration-form');
+        const previewEmpty = document.getElementById('event-preview-empty');
+        const previewDetails = document.getElementById('event-preview-details');
+        const backLink = document.getElementById('event-register-back');
+        const setPreviewValue = (id, value, wrapperId) => {
+            const element = document.getElementById(id);
+            const wrapper = wrapperId ? document.getElementById(wrapperId) : null;
+            if (element) element.textContent = value || '';
+            if (wrapper) wrapper.hidden = !value;
+        };
+
+        const updateEventPreview = () => {
+            const option = eventSelect.selectedOptions[0];
+            if (!option || !option.value) {
+                previewEmpty.hidden = false;
+                previewDetails.hidden = true;
+                return;
+            }
+
+            previewEmpty.hidden = true;
+            previewDetails.hidden = false;
+            document.getElementById('event-preview-title').textContent = option.dataset.title || '';
+            setPreviewValue('event-preview-date', option.dataset.date, 'event-preview-date-wrap');
+            setPreviewValue('event-preview-time', option.dataset.time, 'event-preview-time-wrap');
+            setPreviewValue('event-preview-location', option.dataset.location, 'event-preview-location-wrap');
+            setPreviewValue('event-preview-description', option.dataset.description);
+            document.getElementById('event-preview-description').hidden = !option.dataset.description;
+            if (form && option.dataset.registerUrl) form.action = option.dataset.registerUrl;
+            if (backLink && option.dataset.detailUrl) backLink.href = option.dataset.detailUrl;
+        };
+
+        eventSelect.addEventListener('change', updateEventPreview);
+        updateEventPreview();
+    });
+</script>
+{% endblock %}

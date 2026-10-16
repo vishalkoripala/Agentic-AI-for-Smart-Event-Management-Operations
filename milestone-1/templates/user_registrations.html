@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}My Registrations — EventOps AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .registrations-page {
+        min-height: calc(100vh - 150px);
+        margin: -1.5rem -12px;
+        padding: clamp(1.5rem, 5vw, 3.5rem) 1rem;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        background: linear-gradient(135deg, #f2f6ff 0%, #eef0ff 52%, #e9f1ff 100%);
+    }
+    .registrations-panel {
+        width: min(100%, 920px);
+        overflow: hidden;
+        border: 0;
+        border-radius: 1.25rem;
+        background: #fff;
+        box-shadow: 0 18px 48px rgba(54, 88, 157, 0.15);
+    }
+    .registrations-header {
+        padding: 1rem 1.25rem;
+        color: #fff;
+        background: linear-gradient(110deg, #087cf0, #3429e8 58%, #7019e8);
+    }
+    .registrations-header h1 {
+        margin: 0;
+        font-size: clamp(1.2rem, 3vw, 1.55rem);
+        font-weight: 700;
+    }
+    .registrations-header p {
+        margin: 0.2rem 0 0;
+        color: rgba(255, 255, 255, 0.88);
+        font-size: 0.8rem;
+    }
+    .registrations-header .btn {
+        flex-shrink: 0;
+        border-radius: 999px;
+        padding: 0.35rem 0.85rem;
+        font-size: 0.78rem;
+    }
+    .registrations-body { padding: 1rem 1.25rem 1.1rem; }
+    .registration-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 0.85rem;
+    }
+    .summary-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.28rem 0.65rem;
+        border: 1px solid #edf0f5;
+        border-radius: 999px;
+        background: #f7f9fc;
+        color: #465166;
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+    .summary-pill strong { color: #24324a; }
+    .registrations-table-wrap { overflow-x: auto; }
+    .registrations-table {
+        min-width: 650px;
+        margin-bottom: 0.9rem;
+        vertical-align: middle;
+        font-size: 0.8rem;
+    }
+    .registrations-table thead th {
+        padding: 0.55rem 0.45rem;
+        border-bottom-color: #dfe4eb;
+        color: #344054;
+        font-size: 0.72rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .registrations-table tbody td {
+        padding: 0.65rem 0.45rem;
+        background: #f8f9fb;
+        border-bottom: 0;
+    }
+    .registrations-table tbody tr + tr td { border-top: 0.35rem solid #fff; }
+    .registration-event-link {
+        color: #087cf0;
+        font-weight: 700;
+        text-decoration: none;
+    }
+    .registration-event-link:hover { text-decoration: underline; }
+    .registration-event-meta {
+        display: block;
+        margin-top: 0.12rem;
+        color: #778195;
+        font-size: 0.68rem;
+        white-space: nowrap;
+    }
+    .ticket-badge, .checkin-badge {
+        display: inline-block;
+        border-radius: 0.3rem;
+        padding: 0.18rem 0.4rem;
+        font-size: 0.67rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .ticket-standard { color: #175cd3; background: #eaf2ff; }
+    .ticket-vip { color: #087e8b; background: #d9f5f7; }
+    .ticket-speaker { color: #6941c6; background: #eee6ff; }
+    .ticket-press { color: #9a6700; background: #fff2cc; }
+    .checkin-yes { color: #157347; background: #dff4e8; }
+    .checkin-no { color: #fff; background: #6c757d; }
+    .registration-actions { display: flex; gap: 0.25rem; }
+    .registration-actions .btn {
+        display: inline-grid;
+        width: 1.9rem;
+        height: 1.7rem;
+        place-items: center;
+        padding: 0;
+        border-radius: 999px;
+        font-size: 0.72rem;
+    }
+    .registration-actions form { margin: 0; }
+    .registration-footer {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+    .registration-footer .btn { font-size: 0.76rem; }
+    .registration-empty {
+        padding: 2.25rem 1rem;
+        color: #697386;
+        text-align: center;
+    }
+    @media (max-width: 576px) {
+        .registrations-page { padding: 1rem 0.65rem; }
+        .registrations-header { padding: 0.9rem; }
+        .registrations-body { padding: 0.9rem; }
+        .registrations-header p { max-width: 18rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set total_count = registrations|length %}
+{% set checked_in_count = registrations|selectattr('checked_in')|list|length %}
+{% set pending_count = total_count - checked_in_count %}
+
+<section class="registrations-page">
+    <div class="registrations-panel">
+        <header class="registrations-header d-flex justify-content-between align-items-center gap-3">
+            <div>
+                <h1><i class="bi bi-card-list me-1"></i> My Registrations</h1>
+                <p>Manage your event registrations — change ticket type or cancel.</p>
+            </div>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-light">
+                <i class="bi bi-arrow-left me-1"></i> Dashboard
+            </a>
+        </header>
+
+        <div class="registrations-body">
+            <div class="registration-summary" aria-label="Registration summary">
+                <span class="summary-pill"><i class="bi bi-card-checklist text-primary"></i> Total: <strong>{{ total_count }}</strong></span>
+                <span class="summary-pill"><i class="bi bi-check-circle text-success"></i> Checked In: <strong>{{ checked_in_count }}</strong></span>
+                <span class="summary-pill"><i class="bi bi-clock text-warning"></i> Pending: <strong>{{ pending_count }}</strong></span>
+            </div>
+
+            {% if registrations %}
+            <div class="registrations-table-wrap">
+                <table class="table registrations-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Event</th>
+                            <th scope="col">Ticket Type</th>
+                            <th scope="col">Checked In</th>
+                            <th scope="col">Registered On</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for registration in registrations %}
+                        <tr>
+                            <td>
+                                {% if registration.event %}
+                                <a class="registration-event-link" href="{{ url_for('event_detail', event_id=registration.event.id) }}">{{ registration.event.title }}</a>
+                                <span class="registration-event-meta">
+                                    {{ registration.event.date or 'Date to be announced' }}{% if registration.event.time %} at {{ registration.event.time }}{% endif %}
+                                </span>
+                                {% else %}
+                                <span class="text-danger fw-semibold">Event unavailable</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="ticket-badge {% if registration.ticket_type == 'VIP' %}ticket-vip{% elif registration.ticket_type == 'Speaker' %}ticket-speaker{% elif registration.ticket_type == 'Press' %}ticket-press{% else %}ticket-standard{% endif %}">{{ registration.ticket_type }}</span>
+                            </td>
+                            <td><span class="checkin-badge {{ 'checkin-yes' if registration.checked_in else 'checkin-no' }}">{{ 'Yes' if registration.checked_in else 'No' }}</span></td>
+                            <td class="text-nowrap">{{ registration.registered_at.strftime('%Y-%m-%d %H:%M') if registration.registered_at else '—' }}</td>
+                            <td>
+                                <div class="registration-actions">
+                                    {% if registration.event %}
+                                    <a class="btn btn-outline-primary" href="{{ url_for('event_detail', event_id=registration.event.id) }}" aria-label="View {{ registration.event.title }}" title="View event"><i class="bi bi-eye"></i></a>
+                                    {% if registration.event.status == 'completed' %}
+                                    <a class="btn btn-outline-success" href="{{ url_for('feedback', event_id=registration.event.id) }}" aria-label="Leave feedback for {{ registration.event.title }}" title="Leave or update feedback"><i class="bi bi-chat-square-text"></i></a>
+                                    {% endif %}
+                                    {% endif %}
+                                    <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#editRegistration{{ registration.id }}" aria-label="Edit ticket type" title="Edit ticket type"><i class="bi bi-pencil"></i></button>
+                                    <form method="POST" action="{{ url_for('cancel_registration', reg_id=registration.id) }}" onsubmit="return confirm('Cancel this event registration? This cannot be undone.');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-outline-danger" aria-label="Cancel registration" title="Cancel registration"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="registration-footer">
+                <a href="{{ url_for('user_register_event') }}" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Register for a New Event</a>
+                <a href="{{ url_for('browse_events') }}" class="btn btn-outline-secondary"><i class="bi bi-calendar-event me-1"></i>Browse All Events</a>
+            </div>
+
+            {% for registration in registrations %}
+            <div class="modal fade" id="editRegistration{{ registration.id }}" tabindex="-1" aria-labelledby="editRegistrationLabel{{ registration.id }}" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <form method="POST" action="{{ url_for('edit_registration', reg_id=registration.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div class="modal-header">
+                                <h2 class="modal-title fs-5" id="editRegistrationLabel{{ registration.id }}">Change ticket type</h2>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                {% if registration.event %}<p class="mb-3"><strong>Event:</strong> {{ registration.event.title }}</p>{% endif %}
+                                <label class="form-label" for="ticketType{{ registration.id }}">Ticket type</label>
+                                <select class="form-select" id="ticketType{{ registration.id }}" name="ticket_type">
+                                    {% for ticket_type in ticket_types %}
+                                    <option value="{{ ticket_type }}" {% if registration.ticket_type == ticket_type %}selected{% endif %}>{{ ticket_type }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Keep current</button>
+                                <button type="submit" class="btn btn-primary">Save ticket type</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="registration-empty">
+                <i class="bi bi-calendar2-x d-block fs-2 mb-2"></i>
+                <p class="mb-3">You haven’t registered for an event yet.</p>
+                <div class="registration-footer justify-content-center">
+                    <a href="{{ url_for('user_register_event') }}" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Register for a New Event</a>
+                    <a href="{{ url_for('browse_events') }}" class="btn btn-outline-secondary"><i class="bi bi-calendar-event me-1"></i>Browse All Events</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

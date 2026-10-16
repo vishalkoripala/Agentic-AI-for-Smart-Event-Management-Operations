@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy Policy | EventOps AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .privacy-page {
+        --privacy-ink: #17213b;
+        --privacy-muted: #66728a;
+        --privacy-line: #e6eaf2;
+        color: var(--privacy-ink);
+        padding-bottom: 1.5rem;
+    }
+
+    .privacy-container { width: min(100%, 1040px); margin-inline: auto; }
+    .privacy-hero {
+        position: relative;
+        overflow: hidden;
+        padding: clamp(2rem, 5vw, 4rem);
+        border-radius: 1.75rem;
+        color: #fff;
+        background: linear-gradient(125deg, #0d6efd 0%, #4c35db 58%, #7b2fc5 100%);
+        box-shadow: 0 22px 55px rgba(44, 69, 174, 0.18);
+    }
+    .privacy-hero::after {
+        position: absolute;
+        top: -10rem;
+        right: -5rem;
+        width: 26rem;
+        height: 26rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        box-shadow: 0 0 0 2.5rem rgba(255, 255, 255, 0.04), 0 0 0 5rem rgba(255, 255, 255, 0.025);
+        content: "";
+        pointer-events: none;
+    }
+    .privacy-hero-content { position: relative; z-index: 1; max-width: 720px; }
+    .privacy-kicker { margin-bottom: 0.85rem; color: rgba(255, 255, 255, 0.78); font-size: 0.76rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+    .privacy-hero h1 { margin: 0; font-size: clamp(2.4rem, 6vw, 4.5rem); font-weight: 800; letter-spacing: -0.05em; line-height: 1.04; }
+    .privacy-hero p { max-width: 650px; margin: 1rem 0 0; color: rgba(255, 255, 255, 0.86); font-size: 1.05rem; line-height: 1.75; }
+    .privacy-card {
+        margin-top: 1.5rem;
+        padding: clamp(1.25rem, 4vw, 2.5rem);
+        border: 1px solid var(--privacy-line);
+        border-radius: 1.25rem;
+        background: #fff;
+        box-shadow: 0 12px 35px rgba(27, 39, 75, 0.06);
+    }
+    .privacy-updated { margin-bottom: 1.5rem; color: var(--privacy-muted); font-size: 0.9rem; }
+    .privacy-section { padding: 1.35rem 0; border-top: 1px solid var(--privacy-line); }
+    .privacy-section:first-of-type { padding-top: 0; border-top: 0; }
+    .privacy-section h2 { margin: 0 0 0.65rem; font-size: 1.15rem; font-weight: 750; }
+    .privacy-section p, .privacy-section li { color: #4d5a70; line-height: 1.75; }
+    .privacy-section p:last-child { margin-bottom: 0; }
+    .privacy-section ul { margin-bottom: 0; padding-left: 1.2rem; }
+    .privacy-section li + li { margin-top: 0.35rem; }
+    .privacy-section a { color: #0d6efd; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="privacy-page" aria-labelledby="privacy-title">
+    <div class="privacy-container">
+        <header class="privacy-hero">
+            <div class="privacy-hero-content">
+                <div class="privacy-kicker"><i class="bi bi-shield-lock me-1" aria-hidden="true"></i> Your information</div>
+                <h1 id="privacy-title">Privacy Policy</h1>
+                <p>This page explains what information EventOps AI handles and how it is used when you use the platform.</p>
+            </div>
+        </header>
+
+        <article class="privacy-card">
+            <p class="privacy-updated"><strong>Last updated:</strong> October 15, 2026</p>
+
+            <section class="privacy-section">
+                <h2>Information the platform handles</h2>
+                <p>Depending on the features you use, EventOps AI may store or process:</p>
+                <ul>
+                    <li>Account details such as your name, email address, and password hash.</li>
+                    <li>Event registration details, including the event, ticket type, registration status, and check-in status.</li>
+                    <li>Feedback you submit, including a rating and optional comment.</li>
+                    <li>Messages sent through Contact, including your name, email address, topic, and message.</li>
+                    <li>Text you enter in the AI assistant.</li>
+                </ul>
+            </section>
+
+            <section class="privacy-section">
+                <h2>How information is used</h2>
+                <p>Information is used to create and maintain accounts, authenticate users, manage event registrations, display your registrations and feedback, respond to contact messages, and provide the platform’s event-management features.</p>
+            </section>
+
+            <section class="privacy-section">
+                <h2>AI assistant</h2>
+                <p>If you use the AI assistant, the text you submit may be sent to Google’s Gemini service so it can interpret your request and generate a response. Avoid including passwords or other sensitive information in assistant messages. The assistant may also use information available in EventOps AI to answer requests about events or your registrations.</p>
+            </section>
+
+            <section class="privacy-section">
+                <h2>Cookies and external services</h2>
+                <p>The platform uses a session cookie to support sign-in and form security. The site also loads interface libraries from jsDelivr; those requests may be subject to that service’s own privacy practices.</p>
+            </section>
+
+            <section class="privacy-section">
+                <h2>Storage and security</h2>
+                <p>Platform records are stored in the database configured for this deployment. Passwords are stored as hashes rather than readable text. Data retention and backup practices depend on the operator’s deployment and database configuration.</p>
+            </section>
+
+            <section class="privacy-section">
+                <h2>Your questions or requests</h2>
+                <p>For questions about information associated with your account, or to request a correction or deletion, contact the platform team through the <a href="{{ url_for('contact') }}">Contact page</a>.</p>
+            </section>
+        </article>
+    </div>
+</section>
+{% endblock %}

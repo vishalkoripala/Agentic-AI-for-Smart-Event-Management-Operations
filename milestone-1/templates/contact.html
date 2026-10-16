@@ -1,0 +1,398 @@
+<!--suppress HtmlUnknownTarget -->
+{% extends "base.html" %}
+
+{% block title %}Contact EventOps AI | We're Here to Help{% endblock %}
+
+{% block extra_css %}
+<style>
+    .contact-page {
+        --contact-ink: #17213b;
+        --contact-muted: #66728a;
+        --contact-line: #e5eaf3;
+        --contact-blue: #0d6efd;
+        color: var(--contact-ink);
+        padding-bottom: 1.5rem;
+    }
+
+    .contact-container {
+        width: min(100%, 1220px);
+        margin-inline: auto;
+    }
+
+    .contact-hero {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        padding: clamp(2rem, 5vw, 4.25rem);
+        border-radius: 2rem;
+        color: #fff;
+        background: linear-gradient(128deg, #0d6efd 0%, #4c35db 55%, #7b2fc5 100%);
+        box-shadow: 0 22px 55px rgba(44, 69, 174, 0.2);
+    }
+
+    .contact-hero::before,
+    .contact-hero::after {
+        position: absolute;
+        z-index: -1;
+        content: "";
+        pointer-events: none;
+    }
+
+    .contact-hero::before {
+        top: -12rem;
+        right: -5rem;
+        width: 31rem;
+        height: 31rem;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 50%;
+        box-shadow: 0 0 0 2.5rem rgba(255, 255, 255, 0.035),
+                    0 0 0 6rem rgba(255, 255, 255, 0.025);
+    }
+
+    .contact-hero::after {
+        inset: 0;
+        opacity: 0.18;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.75) 0.7px, transparent 0.7px);
+        background-size: 18px 18px;
+        mask-image: linear-gradient(90deg, transparent 18%, #000 100%);
+    }
+
+    .contact-hero-content,
+    .contact-hero-art { position: relative; z-index: 1; }
+
+    .contact-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        margin-bottom: 1rem;
+        padding: 0.55rem 0.85rem;
+        border: 1px solid rgba(255, 255, 255, 0.27);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.94);
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    .contact-hero h1 {
+        max-width: 720px;
+        margin: 0 0 1rem;
+        font-size: clamp(2.6rem, 5.5vw, 4.7rem);
+        font-weight: 800;
+        letter-spacing: -0.055em;
+        line-height: 1.04;
+    }
+
+    .contact-hero h1 span { color: #dfe8ff; }
+
+    .contact-hero-copy {
+        max-width: 650px;
+        margin: 0;
+        color: rgba(255, 255, 255, 0.86);
+        font-size: clamp(1rem, 1.5vw, 1.18rem);
+        line-height: 1.75;
+    }
+
+    .contact-hero-art {
+        display: grid;
+        width: min(100%, 230px);
+        aspect-ratio: 1;
+        margin-inline: auto;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 2.2rem;
+        background: rgba(255, 255, 255, 0.12);
+        box-shadow: 0 22px 45px rgba(25, 27, 91, 0.2);
+        backdrop-filter: blur(12px);
+        transform: rotate(3deg);
+    }
+
+    .contact-hero-art i {
+        color: #fff;
+        font-size: clamp(5rem, 9vw, 7rem);
+        filter: drop-shadow(0 10px 18px rgba(22, 25, 83, 0.2));
+    }
+
+    .contact-main { margin-top: clamp(2rem, 4vw, 3rem); }
+
+    .contact-info,
+    .contact-form-card {
+        height: 100%;
+        border: 1px solid var(--contact-line);
+        border-radius: 1.5rem;
+        background: #fff;
+        box-shadow: 0 14px 38px rgba(28, 42, 82, 0.065);
+    }
+
+    .contact-info {
+        padding: clamp(1.5rem, 3vw, 2.2rem);
+        background: linear-gradient(155deg, #fff 0%, #f8faff 100%);
+    }
+
+    .section-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        color: var(--contact-blue);
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+    }
+
+    .contact-info h2,
+    .contact-form-card h2 {
+        margin: 0 0 0.7rem;
+        color: var(--contact-ink);
+        font-size: clamp(1.45rem, 2.4vw, 2rem);
+        font-weight: 800;
+        letter-spacing: -0.035em;
+    }
+
+    .contact-intro {
+        margin: 0;
+        color: var(--contact-muted);
+        line-height: 1.75;
+    }
+
+    .help-list {
+        display: grid;
+        gap: 1.2rem;
+        margin: 1.75rem 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .help-item { display: flex; align-items: flex-start; gap: 0.9rem; }
+
+    .help-icon {
+        display: grid;
+        flex: 0 0 2.8rem;
+        width: 2.8rem;
+        height: 2.8rem;
+        place-items: center;
+        border-radius: 0.9rem;
+        background: #edf3ff;
+        color: #245edb;
+        font-size: 1.2rem;
+    }
+
+    .help-item strong {
+        display: block;
+        margin: 0.05rem 0 0.25rem;
+        color: var(--contact-ink);
+        font-size: 0.96rem;
+    }
+
+    .help-item span {
+        display: block;
+        color: var(--contact-muted);
+        font-size: 0.9rem;
+        line-height: 1.6;
+    }
+
+    .contact-tip {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 1rem;
+        border: 1px solid #dce7ff;
+        border-radius: 1rem;
+        background: #f2f6ff;
+        color: #465675;
+        font-size: 0.88rem;
+        line-height: 1.6;
+    }
+
+    .contact-tip i { margin-top: 0.1rem; color: #245edb; font-size: 1.05rem; }
+    .contact-tip strong { color: var(--contact-ink); }
+
+    .contact-about-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-top: 1.4rem;
+        color: #245edb;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .contact-about-link:hover { color: #173e9b; text-decoration: underline; }
+
+    .contact-form-card { padding: clamp(1.5rem, 3vw, 2.25rem); }
+
+    .contact-form-card .form-label {
+        margin-bottom: 0.45rem;
+        color: #273450;
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
+    .contact-form-card .form-control,
+    .contact-form-card .form-select {
+        min-height: 3.1rem;
+        border-color: #dfe5ef;
+        border-radius: 0.8rem;
+        color: var(--contact-ink);
+        box-shadow: none;
+    }
+
+    .contact-form-card textarea.form-control { min-height: 9rem; resize: vertical; }
+
+    .contact-form-card .form-control::placeholder { color: #9aa4b6; }
+
+    .contact-form-card .form-control:focus,
+    .contact-form-card .form-select:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.22rem rgba(13, 110, 253, 0.13);
+    }
+
+    .contact-submit {
+        min-height: 3.2rem;
+        border: 0;
+        border-radius: 0.85rem;
+        background: linear-gradient(110deg, #0d6efd, #5638dc);
+        box-shadow: 0 10px 20px rgba(48, 83, 201, 0.2);
+        font-weight: 750;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .contact-submit:hover {
+        background: linear-gradient(110deg, #0b5ed7, #4b2fc9);
+        box-shadow: 0 13px 24px rgba(48, 83, 201, 0.27);
+        transform: translateY(-2px);
+    }
+
+    .contact-form-note {
+        margin: 0.85rem 0 0;
+        color: #7a8599;
+        font-size: 0.8rem;
+        line-height: 1.55;
+    }
+
+    @media (max-width: 47.99rem) {
+        .contact-hero { border-radius: 1.5rem; }
+        .contact-hero-art { width: 145px; margin-top: 1.5rem; border-radius: 1.5rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .contact-submit { transition: none; }
+        .contact-submit:hover { transform: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="contact-page">
+    <div class="contact-container">
+        <section class="contact-hero" aria-labelledby="contact-title">
+            <div class="row align-items-center">
+                <div class="col-lg-8 contact-hero-content">
+                    <span class="contact-kicker"><i class="bi bi-chat-square-heart" aria-hidden="true"></i> Contact our team</span>
+                    <h1 id="contact-title">Let’s make your next event <span>run smoothly.</span></h1>
+                    <p class="contact-hero-copy">Have a question about EventOps AI, need a hand with an event workflow, or want to share an idea? Send us a note and tell us what you’re working on.</p>
+                </div>
+                <div class="col-lg-4 d-none d-lg-block contact-hero-content">
+                    <div class="contact-hero-art" aria-hidden="true"><i class="bi bi-envelope-paper-heart"></i></div>
+                </div>
+            </div>
+        </section>
+
+        <div class="row g-4 contact-main">
+            <div class="col-lg-5">
+                <aside class="contact-info" aria-labelledby="contact-help-title">
+                    <span class="section-kicker"><i class="bi bi-life-preserver" aria-hidden="true"></i> How can we help?</span>
+                    <h2 id="contact-help-title">A little context goes a long way.</h2>
+                    <p class="contact-intro">Choose the topic that best fits your question. We’re glad to hear from event organizers, attendees, and anyone exploring the platform.</p>
+
+                    <ul class="help-list">
+                        <li class="help-item">
+                            <span class="help-icon"><i class="bi bi-calendar2-check" aria-hidden="true"></i></span>
+                            <div><strong>Event operations</strong><span>Questions about registrations, venues, schedules, or on-site coordination.</span></div>
+                        </li>
+                        <li class="help-item">
+                            <span class="help-icon"><i class="bi bi-person-gear" aria-hidden="true"></i></span>
+                            <div><strong>Account and access</strong><span>Tell us where you’re getting stuck while using your EventOps AI account.</span></div>
+                        </li>
+                        <li class="help-item">
+                            <span class="help-icon"><i class="bi bi-lightbulb" aria-hidden="true"></i></span>
+                            <div><strong>Ideas and feedback</strong><span>Share a feature idea or let us know how the platform could work better for you.</span></div>
+                        </li>
+                    </ul>
+
+                    <div class="contact-tip">
+                        <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+                        <span><strong>Helpful details:</strong> include the event name and the page or workflow you’re asking about. Please leave out passwords or other sensitive information.</span>
+                    </div>
+
+                    <a class="contact-about-link" href="{{ url_for('about') }}">Learn more about EventOps AI <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                </aside>
+            </div>
+
+            <div class="col-lg-7">
+                <section class="contact-form-card" aria-labelledby="contact-form-title">
+                    <span class="section-kicker"><i class="bi bi-send" aria-hidden="true"></i> Send a message</span>
+                    <h2 id="contact-form-title">What can we help you with?</h2>
+                    <p class="contact-intro mb-4">Fill out the form and include enough detail for us to understand your question.</p>
+
+                    <form method="POST" action="{{ url_for('contact') }}">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="contact-name">Your name <span class="text-danger" aria-hidden="true">*</span></label>
+                                <input class="form-control" type="text" id="contact-name" name="name" value="{{ request.form.get('name', '') }}" maxlength="100" autocomplete="name" placeholder="e.g. Alex Morgan" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="contact-email">Email address <span class="text-danger" aria-hidden="true">*</span></label>
+                                <input class="form-control" type="email" id="contact-email" name="email" value="{{ request.form.get('email', '') }}" maxlength="100" autocomplete="email" placeholder="alex@example.com" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="contact-topic">What is this about?</label>
+                                <select class="form-select" id="contact-topic" name="topic">
+                                    {% if not request.form.get('topic') %}
+                                    <option value="" selected>Select a topic</option>
+                                    {% else %}
+                                    <option value="">Select a topic</option>
+                                    {% endif %}
+                                    {% if request.form.get('topic') == 'event-operations' %}
+                                    <option value="event-operations" selected>Event operations</option>
+                                    {% else %}
+                                    <option value="event-operations">Event operations</option>
+                                    {% endif %}
+                                    {% if request.form.get('topic') == 'account-access' %}
+                                    <option value="account-access" selected>Account and access</option>
+                                    {% else %}
+                                    <option value="account-access">Account and access</option>
+                                    {% endif %}
+                                    {% if request.form.get('topic') == 'feedback' %}
+                                    <option value="feedback" selected>Ideas and feedback</option>
+                                    {% else %}
+                                    <option value="feedback">Ideas and feedback</option>
+                                    {% endif %}
+                                    {% if request.form.get('topic') == 'other' %}
+                                    <option value="other" selected>Something else</option>
+                                    {% else %}
+                                    <option value="other">Something else</option>
+                                    {% endif %}
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="contact-message">Your message <span class="text-danger" aria-hidden="true">*</span></label>
+                                <textarea class="form-control" id="contact-message" name="message" maxlength="5000" placeholder="Tell us a little about your question…" required>{{ request.form.get('message', '') }}</textarea>
+                            </div>
+                            <div class="col-12 pt-1">
+                                <button class="btn btn-primary contact-submit w-100" type="submit">
+                                    Send message <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i>
+                                </button>
+                                <p class="contact-form-note"><i class="bi bi-shield-lock me-1" aria-hidden="true"></i> Please don’t include passwords, payment details, or other sensitive information.</p>
+                            </div>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}{{ event.title }} | EventOps AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .event-detail-shell {
+        min-height: calc(100vh - 160px);
+        margin: -1.5rem -12px;
+        padding: clamp(1.5rem, 4vw, 3.25rem) 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f4f7ff 0%, #f1edff 100%);
+    }
+    .event-detail-card {
+        width: min(100%, 1000px);
+        overflow: hidden;
+        border: 0;
+        border-radius: 1.5rem;
+        background: #fff;
+        box-shadow: 0 1.25rem 3.5rem rgba(37, 50, 110, 0.14);
+    }
+    .event-detail-hero {
+        position: relative;
+        overflow: hidden;
+        padding: clamp(1.5rem, 4vw, 2.75rem);
+        color: #fff;
+        background: linear-gradient(120deg, #0d6efd 0%, #5d24ed 100%);
+    }
+    .event-detail-hero::after {
+        position: absolute;
+        right: -4rem;
+        bottom: -7rem;
+        width: 18rem;
+        height: 18rem;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 50%;
+        box-shadow: 0 0 0 2rem rgba(255, 255, 255, 0.035), 0 0 0 4rem rgba(255, 255, 255, 0.025);
+        content: "";
+        pointer-events: none;
+    }
+    .event-detail-topline { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+    .event-detail-back { color: rgba(255, 255, 255, 0.9); font-size: 0.88rem; text-decoration: none; }
+    .event-detail-back:hover { color: #fff; text-decoration: underline; }
+    .event-detail-status { border: 1px solid rgba(255, 255, 255, 0.35); color: #fff; background: rgba(255, 255, 255, 0.14); }
+    .event-detail-heading { position: relative; z-index: 1; max-width: 760px; margin-top: 2rem; }
+    .event-detail-kicker { margin-bottom: 0.45rem; color: rgba(255, 255, 255, 0.78); font-size: 0.76rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+    .event-detail-heading h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.25rem); font-weight: 750; letter-spacing: -0.035em; line-height: 1.08; }
+    .event-detail-heading p { max-width: 680px; margin: 0.8rem 0 0; color: rgba(255, 255, 255, 0.84); }
+    .event-detail-meta {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.7rem;
+        margin-top: 1.6rem;
+    }
+    .event-meta-card {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.8rem 0.9rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 0.85rem;
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(8px);
+    }
+    .event-meta-icon { flex: 0 0 2.2rem; display: grid; width: 2.2rem; height: 2.2rem; place-items: center; border-radius: 0.65rem; background: rgba(255, 255, 255, 0.17); font-size: 1.05rem; }
+    .event-meta-copy { min-width: 0; }
+    .event-meta-copy span { display: block; color: rgba(255, 255, 255, 0.73); font-size: 0.7rem; }
+    .event-meta-copy strong { display: block; overflow-wrap: anywhere; font-size: 0.86rem; font-weight: 650; }
+    .event-detail-content { padding: clamp(1.25rem, 3vw, 2.25rem); }
+    .event-detail-description { color: #475467; line-height: 1.75; white-space: pre-line; }
+    .event-section-kicker { color: #6f42c1; font-size: 0.76rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+    .event-about-title { margin: 0.35rem 0 0.8rem; color: #182230; font-size: 1.45rem; font-weight: 700; }
+    .event-side-card { height: 100%; padding: 1.25rem; border: 1px solid #e8eaf2; border-radius: 1.1rem; background: #f8f9fd; }
+    .event-side-card h2 { margin-bottom: 1rem; font-size: 1.02rem; font-weight: 700; }
+    .event-capacity { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 0; color: #667085; font-size: 0.88rem; }
+    .event-capacity strong { color: #344054; text-align: right; }
+    .event-detail-cta {
+        display: block;
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 0;
+        border-radius: 999px;
+        color: #fff;
+        text-align: center;
+        text-decoration: none;
+        font-weight: 650;
+        background: linear-gradient(110deg, #0d6efd 0%, #5d24ed 100%);
+        box-shadow: 0 0.4rem 1rem rgba(68, 76, 210, 0.2);
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .event-detail-cta:hover { transform: translateY(-1px); color: #fff; box-shadow: 0 0.65rem 1.2rem rgba(68, 76, 210, 0.28); }
+    .event-detail-cta:focus-visible { outline: 3px solid rgba(13, 110, 253, 0.35); outline-offset: 3px; }
+    .event-detail-message { margin: 0; border-radius: 0.85rem; font-size: 0.9rem; }
+
+    @media (max-width: 767.98px) {
+        .event-detail-meta { grid-template-columns: 1fr; }
+        .event-detail-heading { margin-top: 1.5rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set is_full = event.capacity is not none and event.registrations|length >= event.capacity %}
+<section class="event-detail-shell">
+    <article class="event-detail-card">
+        <header class="event-detail-hero">
+            <div class="event-detail-topline">
+                <a class="event-detail-back" href="{{ url_for('browse_events') }}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>All events</a>
+                <span class="badge rounded-pill event-detail-status">{{ event.status|title }}</span>
+            </div>
+
+            <div class="event-detail-heading">
+                <div class="event-detail-kicker">Event overview</div>
+                <h1>{{ event.title }}</h1>
+                {% if event.description %}<p>{{ event.description|truncate(180, True, '...') }}</p>{% else %}<p>Explore the details and reserve your place at this event.</p>{% endif %}
+            </div>
+
+            <div class="event-detail-meta">
+                <div class="event-meta-card">
+                    <span class="event-meta-icon"><i class="bi bi-calendar-event" aria-hidden="true"></i></span>
+                    <div class="event-meta-copy"><span>Date</span><strong>{{ event.date or 'To be announced' }}</strong></div>
+                </div>
+                <div class="event-meta-card">
+                    <span class="event-meta-icon"><i class="bi bi-clock" aria-hidden="true"></i></span>
+                    <div class="event-meta-copy"><span>Time</span><strong>{{ event.time or 'To be announced' }}</strong></div>
+                </div>
+                <div class="event-meta-card">
+                    <span class="event-meta-icon"><i class="bi bi-geo-alt" aria-hidden="true"></i></span>
+                    <div class="event-meta-copy"><span>Location</span><strong>{{ event.location or 'To be announced' }}</strong></div>
+                </div>
+            </div>
+        </header>
+
+        <div class="event-detail-content">
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="event-section-kicker">About this event</div>
+                    <h2 class="event-about-title">What to expect</h2>
+                    {% if event.description %}
+                        <div class="event-detail-description">{{ event.description }}</div>
+                    {% else %}
+                        <p class="event-detail-description mb-0">More event details will be announced soon.</p>
+                    {% endif %}
+                </div>
+
+                <div class="col-lg-4">
+                    <aside class="event-side-card">
+                        <h2>Your event</h2>
+                        {% if event.capacity is not none %}
+                        <div class="event-capacity">
+                            <span><i class="bi bi-people me-1" aria-hidden="true"></i>Capacity</span>
+                            <strong>{{ event.capacity }}</strong>
+                        </div>
+                        {% endif %}
+                        <div class="event-capacity">
+                            <span><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Status</span>
+                            <strong>{{ event.status|title }}</strong>
+                        </div>
+                        <hr class="my-3">
+
+                        {% if registered %}
+                            <div class="alert alert-success event-detail-message">
+                                <i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i>
+                                You're registered.
+                                <a href="{{ url_for('user_my_registrations') }}" class="alert-link">View registrations</a>
+                                {% if event.status == 'completed' %}
+                                    <br><a href="{{ url_for('feedback', event_id=event.id) }}" class="alert-link">Leave or update feedback</a>
+                                {% endif %}
+                            </div>
+                        {% elif event.status == 'upcoming' and is_full %}
+                            <div class="alert alert-warning event-detail-message">This event has reached capacity.</div>
+                        {% elif event.status == 'upcoming' %}
+                            <a class="event-detail-cta" href="{{ url_for('register_for_event', event_id=event.id) }}"><i class="bi bi-ticket-perforated me-1" aria-hidden="true"></i>Register for this event</a>
+                        {% else %}
+                            <div class="alert alert-secondary event-detail-message">Registration is not available for this event.</div>
+                        {% endif %}
+                        <p class="mt-3 mb-0 text-center text-muted small">
+                            Learn how we handle account and registration information in our
+                            <a href="{{ url_for('privacy') }}">Privacy Policy</a>.
+                        </p>
+                    </aside>
+                </div>
+            </div>
+        </div>
+    </article>
+</section>
+{% endblock %}
