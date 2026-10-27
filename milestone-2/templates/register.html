@@ -1,0 +1,438 @@
+<!--suppress HtmlUnknownTarget -->
+{% extends "base.html" %}
+
+{% block title %}Create an Account | EventOps AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-page {
+        --auth-ink: #17213b;
+        --auth-muted: #68748b;
+        --auth-line: #e5eaf3;
+        width: min(100%, 1120px);
+        margin: 1rem auto 2rem;
+        color: var(--auth-ink);
+    }
+
+    .auth-shell {
+        display: grid;
+        min-height: 640px;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
+        overflow: hidden;
+        border: 1px solid var(--auth-line);
+        border-radius: 2rem;
+        background: #fff;
+        box-shadow: 0 22px 55px rgba(28, 42, 82, 0.1);
+    }
+
+    .auth-showcase {
+        position: relative;
+        isolation: isolate;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        overflow: hidden;
+        padding: clamp(2rem, 5vw, 3.75rem);
+        color: #fff;
+        background: linear-gradient(138deg, #0d6efd 0%, #4c35db 55%, #7130c8 100%);
+    }
+
+    .auth-showcase::before,
+    .auth-showcase::after {
+        position: absolute;
+        z-index: -1;
+        content: "";
+        pointer-events: none;
+    }
+
+    .auth-showcase::before {
+        top: -12rem;
+        right: -13rem;
+        width: 34rem;
+        height: 34rem;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 50%;
+        box-shadow: 0 0 0 3rem rgba(255, 255, 255, 0.035),
+                    0 0 0 7rem rgba(255, 255, 255, 0.025);
+    }
+
+    .auth-showcase::after {
+        inset: 0;
+        opacity: 0.16;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.7) 0.7px, transparent 0.7px);
+        background-size: 18px 18px;
+        mask-image: linear-gradient(90deg, transparent 8%, #000 100%);
+    }
+
+    .auth-brand,
+    .auth-showcase-copy,
+    .auth-showcase-footer { position: relative; z-index: 1; }
+
+    .auth-brand { display: flex; align-items: center; gap: 0.8rem; }
+
+    .auth-brand-icon {
+        display: grid;
+        width: 3rem;
+        height: 3rem;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 1rem;
+        background: rgba(255, 255, 255, 0.14);
+        font-size: 1.4rem;
+    }
+
+    .auth-brand strong { display: block; font-size: 1.02rem; letter-spacing: -0.01em; }
+
+    .auth-brand small {
+        display: block;
+        margin-top: 0.18rem;
+        color: rgba(255, 255, 255, 0.74);
+        font-size: 0.63rem;
+        font-weight: 750;
+        letter-spacing: 0.12em;
+    }
+
+    .auth-showcase-copy { max-width: 510px; margin: 3rem 0; }
+
+    .auth-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-bottom: 1rem;
+        color: #dfe8ff;
+        font-size: 0.73rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    .auth-showcase h1 {
+        margin: 0 0 1rem;
+        font-size: clamp(2.2rem, 4.3vw, 3.55rem);
+        font-weight: 800;
+        letter-spacing: -0.055em;
+        line-height: 1.06;
+    }
+
+    .auth-showcase-copy > p {
+        max-width: 440px;
+        margin: 0;
+        color: rgba(255, 255, 255, 0.84);
+        line-height: 1.75;
+    }
+
+    .auth-feature-list { display: grid; gap: 0.9rem; margin: 1.8rem 0 0; padding: 0; list-style: none; }
+
+    .auth-feature-list li { display: flex; align-items: flex-start; gap: 0.7rem; color: rgba(255, 255, 255, 0.9); }
+
+    .auth-feature-list i { margin-top: 0.12rem; color: #a9f0d1; }
+
+    .auth-showcase-footer {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        color: rgba(255, 255, 255, 0.75);
+        font-size: 0.82rem;
+    }
+
+    .auth-showcase-footer i { color: #a9f0d1; }
+
+    .auth-panel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: clamp(2rem, 5vw, 4rem);
+    }
+
+    .auth-form-wrap { width: min(100%, 390px); }
+
+    .auth-panel-icon {
+        display: grid;
+        width: 3.15rem;
+        height: 3.15rem;
+        margin-bottom: 1.35rem;
+        place-items: center;
+        border-radius: 1rem;
+        background: #edf3ff;
+        color: #245edb;
+        font-size: 1.35rem;
+    }
+
+    .auth-panel h2 {
+        margin: 0 0 0.6rem;
+        font-size: clamp(1.8rem, 3vw, 2.25rem);
+        font-weight: 800;
+        letter-spacing: -0.045em;
+    }
+
+    .auth-panel-intro { margin: 0 0 1.55rem; color: var(--auth-muted); line-height: 1.65; }
+
+    .auth-form .form-label { margin-bottom: 0.4rem; color: #273450; font-size: 0.88rem; font-weight: 700; }
+
+    .auth-form .form-control {
+        min-height: 2.95rem;
+        border-color: #dfe5ef;
+        border-radius: 0.8rem;
+        color: var(--auth-ink);
+        box-shadow: none;
+    }
+
+    .auth-form .form-control::placeholder { color: #9aa4b6; }
+
+    .auth-form .form-control:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.22rem rgba(13, 110, 253, 0.13);
+    }
+
+    .password-strength { display: grid; gap: 0.4rem; margin-top: 0.55rem; }
+
+    .password-strength-track { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.3rem; }
+
+    .password-strength-track span {
+        height: 0.35rem;
+        border-radius: 999px;
+        background: #e5eaf3;
+        transition: background-color 0.18s ease;
+    }
+
+    .password-strength-track[data-strength="low"] span:nth-child(1) { background: #dc3545; }
+    .password-strength-track[data-strength="medium"] span:nth-child(-n+2) { background: #fd7e14; }
+    .password-strength-track[data-strength="high"] span { background: #198754; }
+
+    .password-strength-scale {
+        display: flex;
+        justify-content: space-between;
+        color: #8a95a8;
+        font-size: 0.7rem;
+    }
+
+    .password-strength-feedback { margin: 0; color: var(--auth-muted); font-size: 0.76rem; }
+
+    .auth-submit {
+        min-height: 3.1rem;
+        border: 0;
+        border-radius: 0.85rem;
+        background: linear-gradient(110deg, #0d6efd, #5638dc);
+        box-shadow: 0 10px 20px rgba(48, 83, 201, 0.2);
+        font-weight: 750;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .auth-submit:hover {
+        background: linear-gradient(110deg, #0b5ed7, #4b2fc9);
+        box-shadow: 0 13px 24px rgba(48, 83, 201, 0.27);
+        transform: translateY(-2px);
+    }
+
+    .auth-switch { margin: 1.2rem 0 0; color: var(--auth-muted); font-size: 0.9rem; text-align: center; }
+
+    .auth-switch a { color: #245edb; font-weight: 750; text-decoration: none; }
+    .auth-switch a:hover { color: #173e9b; text-decoration: underline; }
+
+    .auth-back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-top: 1.25rem;
+        color: #7b869a;
+        font-size: 0.84rem;
+        text-decoration: none;
+    }
+
+    .auth-back-link:hover { color: #245edb; }
+
+    .auth-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.55rem;
+        margin-top: 1rem;
+        padding: 0.7rem 0.8rem;
+        border: 1px solid #dce7ff;
+        border-radius: 0.8rem;
+        background: #f2f6ff;
+        color: #596782;
+        font-size: 0.78rem;
+        line-height: 1.5;
+    }
+
+    .auth-note i { margin-top: 0.08rem; color: #245edb; }
+
+    .account-type-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.8rem;
+        margin: 0 0 1.25rem;
+        padding: 0.9rem;
+        border: 1px solid #dce7ff;
+        border-radius: 0.9rem;
+        background: #f2f6ff;
+    }
+
+    .account-type-icon {
+        display: grid;
+        width: 2.4rem;
+        height: 2.4rem;
+        flex: 0 0 2.4rem;
+        place-items: center;
+        border-radius: 0.75rem;
+        background: #e1ebff;
+        color: #245edb;
+        font-size: 1.1rem;
+    }
+
+    .account-type-card .account-type-label {
+        display: block;
+        margin-bottom: 0.12rem;
+        color: #68748b;
+        font-size: 0.66rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    .account-type-card strong { display: block; color: #273450; font-size: 0.9rem; }
+
+    .account-type-card p {
+        margin: 0.18rem 0 0;
+        color: #596782;
+        font-size: 0.75rem;
+        line-height: 1.45;
+    }
+
+    @media (max-width: 47.99rem) {
+        .auth-page { margin-top: 0; }
+        .auth-shell { min-height: 0; grid-template-columns: 1fr; border-radius: 1.5rem; }
+        .auth-showcase { min-height: 350px; padding: 1.75rem; }
+        .auth-showcase-copy { margin: 2.4rem 0; }
+        .auth-panel { padding: 2rem 1.5rem 2.4rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .auth-submit { transition: none; }
+        .auth-submit:hover { transform: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <div class="auth-shell">
+        <section class="auth-showcase" aria-label="About EventOps AI">
+            <div class="auth-brand">
+                <span class="auth-brand-icon"><i class="bi bi-robot" aria-hidden="true"></i></span>
+                <span><strong>EventOps AI</strong><small>INTELLIGENT EVENT OPERATIONS</small></span>
+            </div>
+
+            <div class="auth-showcase-copy">
+                <span class="auth-eyebrow"><i class="bi bi-diagram-3" aria-hidden="true"></i> One connected platform</span>
+                <h1>Bring your event team into one shared workspace.</h1>
+                <p>EventOps AI connects attendee services with the tools organizers use to plan and run successful events.</p>
+                <ul class="auth-feature-list">
+                    <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>Browse events and manage your registrations.</span></li>
+                    <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>Keep check-in and event updates close at hand.</span></li>
+                    <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>Help organizers coordinate people and operations.</span></li>
+                </ul>
+            </div>
+
+            <div class="auth-showcase-footer"><i class="bi bi-shield-check" aria-hidden="true"></i> Your account keeps your event activity in one place.</div>
+        </section>
+
+        <section class="auth-panel" aria-labelledby="register-title">
+            <div class="auth-form-wrap">
+                <span class="auth-panel-icon"><i class="bi bi-person-plus" aria-hidden="true"></i></span>
+                <h2 id="register-title">Create attendee account</h2>
+                <p class="auth-panel-intro">Join EventOps AI to browse events and manage your registrations.</p>
+
+                <div class="account-type-card">
+                    <span class="account-type-icon"><i class="bi bi-person-check" aria-hidden="true"></i></span>
+                    <span>
+                        <span class="account-type-label">Account type</span>
+                        <strong>Attendee (User)</strong>
+                        <p>Public registration creates an attendee account. Admin access is assigned separately by the platform administrator.</p>
+                    </span>
+                </div>
+
+                <form class="auth-form" method="POST" action="{{ url_for('register') }}">
+                    <div class="mb-3">
+                        <label class="form-label" for="register-name">Full name</label>
+                        <input class="form-control" type="text" id="register-name" name="name" value="{{ request.form.get('name', '') }}" maxlength="100" autocomplete="name" placeholder="Your name" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="register-email">Email address</label>
+                        <input class="form-control" type="email" id="register-email" name="email" value="{{ request.form.get('email', '') }}" maxlength="100" autocomplete="email" placeholder="you@example.com" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="register-password">Password</label>
+                        <input class="form-control" type="password" id="register-password" name="password" minlength="8" maxlength="128" autocomplete="new-password" placeholder="At least 8 characters" required>
+                        <div class="password-strength">
+                            <div class="password-strength-track" id="register-password-meter" data-strength="empty" role="meter" aria-label="Password strength" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0" aria-valuetext="Not rated">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <div class="password-strength-scale" aria-hidden="true"><span>Low</span><span>Medium</span><span>High</span></div>
+                            <p class="password-strength-feedback" id="register-password-feedback" aria-live="polite">Enter a password to see its strength.</p>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="register-confirm-password">Confirm password</label>
+                        <input class="form-control" type="password" id="register-confirm-password" name="confirm_password" minlength="8" maxlength="128" autocomplete="new-password" placeholder="Enter your password again" required>
+                    </div>
+                    <button class="btn btn-primary auth-submit w-100" type="submit">Create account <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i></button>
+                </form>
+
+                <p class="auth-switch">Already have an account? <a href="{{ url_for('login') }}">Sign in</a></p>
+                <a class="auth-back-link" href="{{ url_for('index') }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to home</a>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (() => {
+        const passwordInput = document.getElementById("register-password");
+        const meter = document.getElementById("register-password-meter");
+        const feedback = document.getElementById("register-password-feedback");
+
+        if (!passwordInput || !meter || !feedback) return;
+
+        passwordInput.addEventListener("input", () => {
+            const password = passwordInput.value;
+            if (!password) {
+                meter.dataset.strength = "empty";
+                meter.setAttribute("aria-valuenow", "0");
+                meter.setAttribute("aria-valuetext", "Not rated");
+                feedback.textContent = "Enter a password to see its strength.";
+                return;
+            }
+
+            const checks = [
+                password.length >= 8,
+                /[a-z]/.test(password) && /[A-Z]/.test(password),
+                /\d/.test(password),
+                /[^A-Za-z0-9]/.test(password)
+            ];
+            const score = checks.filter(Boolean).length;
+            let strength;
+            let message;
+
+            if (password.length < 8 || score <= 1) {
+                strength = "low";
+                message = "Low — use 8 or more characters and mix character types.";
+            } else if (password.length >= 12 && score >= 3) {
+                strength = "high";
+                message = "High — good length and character variety.";
+            } else {
+                strength = "medium";
+                message = "Medium — add more length or character variety to improve it.";
+            }
+
+            const level = { low: 1, medium: 2, high: 3 }[strength];
+            meter.dataset.strength = strength;
+            meter.setAttribute("aria-valuenow", String(level));
+            meter.setAttribute("aria-valuetext", strength[0].toUpperCase() + strength.slice(1));
+            feedback.textContent = message;
+        });
+    })();
+</script>
+{% endblock %}

@@ -1,0 +1,422 @@
+<!--suppress HtmlUnknownTarget -->
+{% extends "base.html" %}
+
+{% block title %}Sign In | EventOps AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-page {
+        --auth-ink: #17213b;
+        --auth-muted: #68748b;
+        --auth-line: #e5eaf3;
+        width: min(100%, 1120px);
+        margin: 1rem auto 2rem;
+        color: var(--auth-ink);
+    }
+
+    .auth-shell {
+        display: grid;
+        min-height: 640px;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
+        overflow: hidden;
+        border: 1px solid var(--auth-line);
+        border-radius: 2rem;
+        background: #fff;
+        box-shadow: 0 22px 55px rgba(28, 42, 82, 0.1);
+    }
+
+    .auth-showcase {
+        position: relative;
+        isolation: isolate;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        overflow: hidden;
+        padding: clamp(2rem, 5vw, 3.75rem);
+        color: #fff;
+        background: linear-gradient(138deg, #0d6efd 0%, #4c35db 55%, #7130c8 100%);
+    }
+
+    .auth-showcase::before,
+    .auth-showcase::after {
+        position: absolute;
+        z-index: -1;
+        content: "";
+        pointer-events: none;
+    }
+
+    .auth-showcase::before {
+        top: -12rem;
+        right: -13rem;
+        width: 34rem;
+        height: 34rem;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 50%;
+        box-shadow: 0 0 0 3rem rgba(255, 255, 255, 0.035),
+                    0 0 0 7rem rgba(255, 255, 255, 0.025);
+    }
+
+    .auth-showcase::after {
+        inset: 0;
+        opacity: 0.16;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.7) 0.7px, transparent 0.7px);
+        background-size: 18px 18px;
+        mask-image: linear-gradient(90deg, transparent 8%, #000 100%);
+    }
+
+    .auth-brand,
+    .auth-showcase-copy,
+    .auth-showcase-footer { position: relative; z-index: 1; }
+
+    .auth-brand { display: flex; align-items: center; gap: 0.8rem; }
+
+    .auth-brand-icon {
+        display: grid;
+        width: 3rem;
+        height: 3rem;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 1rem;
+        background: rgba(255, 255, 255, 0.14);
+        font-size: 1.4rem;
+    }
+
+    .auth-brand strong { display: block; font-size: 1.02rem; letter-spacing: -0.01em; }
+
+    .auth-brand small {
+        display: block;
+        margin-top: 0.18rem;
+        color: rgba(255, 255, 255, 0.74);
+        font-size: 0.63rem;
+        font-weight: 750;
+        letter-spacing: 0.12em;
+    }
+
+    .auth-showcase-copy { max-width: 510px; margin: 3rem 0; }
+
+    .auth-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-bottom: 1rem;
+        color: #dfe8ff;
+        font-size: 0.73rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    .auth-showcase h1 {
+        margin: 0 0 1rem;
+        font-size: clamp(2.2rem, 4.3vw, 3.55rem);
+        font-weight: 800;
+        letter-spacing: -0.055em;
+        line-height: 1.06;
+    }
+
+    .auth-showcase-copy > p {
+        max-width: 440px;
+        margin: 0;
+        color: rgba(255, 255, 255, 0.84);
+        line-height: 1.75;
+    }
+
+    .auth-feature-list { display: grid; gap: 0.9rem; margin: 1.8rem 0 0; padding: 0; list-style: none; }
+
+    .auth-feature-list li { display: flex; align-items: flex-start; gap: 0.7rem; color: rgba(255, 255, 255, 0.9); }
+
+    .auth-feature-list i { margin-top: 0.12rem; color: #a9f0d1; }
+
+    .auth-showcase-footer {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        color: rgba(255, 255, 255, 0.75);
+        font-size: 0.82rem;
+    }
+
+    .auth-showcase-footer i { color: #a9f0d1; }
+
+    .auth-panel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: clamp(2rem, 5vw, 4rem);
+    }
+
+    .auth-form-wrap { width: min(100%, 390px); }
+
+    .auth-role-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.65rem;
+    }
+
+    .auth-role-option { position: relative; display: block; margin: 0; cursor: pointer; }
+
+    .auth-role-option input {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .auth-role-card {
+        display: flex;
+        min-height: 5.3rem;
+        align-items: flex-start;
+        gap: 0.6rem;
+        padding: 0.8rem 0.7rem;
+        border: 1px solid #dfe5ef;
+        border-radius: 0.85rem;
+        background: #fff;
+        transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .auth-role-option input:checked + .auth-role-card {
+        border-color: #0d6efd;
+        background: #f2f6ff;
+        box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.1);
+    }
+
+    .auth-role-option input:focus-visible + .auth-role-card {
+        outline: 3px solid rgba(13, 110, 253, 0.25);
+        outline-offset: 2px;
+    }
+
+    .auth-role-icon {
+        display: grid;
+        width: 2rem;
+        height: 2rem;
+        flex: 0 0 2rem;
+        place-items: center;
+        border-radius: 0.65rem;
+        background: #eaf1ff;
+        color: #245edb;
+    }
+
+    .auth-role-card strong { display: block; color: #273450; font-size: 0.82rem; }
+
+    .auth-role-card small {
+        display: block;
+        margin-top: 0.18rem;
+        color: #68748b;
+        font-size: 0.68rem;
+        line-height: 1.35;
+    }
+
+    .auth-panel-icon {
+        display: grid;
+        width: 3.15rem;
+        height: 3.15rem;
+        margin-bottom: 1.35rem;
+        place-items: center;
+        border-radius: 1rem;
+        background: #edf3ff;
+        color: #245edb;
+        font-size: 1.35rem;
+    }
+
+    .auth-panel h2 {
+        margin: 0 0 0.6rem;
+        font-size: clamp(1.8rem, 3vw, 2.25rem);
+        font-weight: 800;
+        letter-spacing: -0.045em;
+    }
+
+    .auth-panel-intro { margin: 0 0 1.8rem; color: var(--auth-muted); line-height: 1.65; }
+
+    .auth-form .form-label { margin-bottom: 0.45rem; color: #273450; font-size: 0.9rem; font-weight: 700; }
+
+    .auth-form .form-control {
+        min-height: 3.15rem;
+        border-color: #dfe5ef;
+        border-radius: 0.85rem;
+        color: var(--auth-ink);
+        box-shadow: none;
+    }
+
+    .auth-form .form-control::placeholder { color: #9aa4b6; }
+
+    .auth-form .form-control:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.22rem rgba(13, 110, 253, 0.13);
+    }
+
+    .auth-form .password-input { padding-right: 3.3rem; }
+
+    .auth-password-toggle {
+        position: absolute;
+        top: 2.15rem;
+        right: 0.45rem;
+        z-index: 2;
+        display: grid;
+        width: 2.55rem;
+        height: 2.55rem;
+        place-items: center;
+        border: 0;
+        border-radius: 0.7rem;
+        background: transparent;
+        color: #68748b;
+        font-size: 1.1rem;
+    }
+
+    .auth-password-toggle:hover,
+    .auth-password-toggle:focus-visible { color: #245edb; background: #edf3ff; }
+
+    .auth-submit {
+        min-height: 3.2rem;
+        border: 0;
+        border-radius: 0.85rem;
+        background: linear-gradient(110deg, #0d6efd, #5638dc);
+        box-shadow: 0 10px 20px rgba(48, 83, 201, 0.2);
+        font-weight: 750;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .auth-submit:hover {
+        background: linear-gradient(110deg, #0b5ed7, #4b2fc9);
+        box-shadow: 0 13px 24px rgba(48, 83, 201, 0.27);
+        transform: translateY(-2px);
+    }
+
+    .auth-switch { margin: 1.4rem 0 0; color: var(--auth-muted); font-size: 0.92rem; text-align: center; }
+
+    .auth-switch a { color: #245edb; font-weight: 750; text-decoration: none; }
+    .auth-switch a:hover { color: #173e9b; text-decoration: underline; }
+
+    .auth-back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-top: 1.5rem;
+        color: #7b869a;
+        font-size: 0.84rem;
+        text-decoration: none;
+    }
+
+    .auth-back-link:hover { color: #245edb; }
+
+    @media (max-width: 47.99rem) {
+        .auth-page { margin-top: 0; }
+        .auth-shell { min-height: 0; grid-template-columns: 1fr; border-radius: 1.5rem; }
+        .auth-showcase { min-height: 350px; padding: 1.75rem; }
+        .auth-showcase-copy { margin: 2.4rem 0; }
+        .auth-panel { padding: 2rem 1.5rem 2.4rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .auth-submit { transition: none; }
+        .auth-submit:hover { transform: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <div class="auth-shell">
+        <section class="auth-showcase" aria-label="About EventOps AI">
+            <div class="auth-brand">
+                <span class="auth-brand-icon"><i class="bi bi-robot" aria-hidden="true"></i></span>
+                <span><strong>EventOps AI</strong><small>INTELLIGENT EVENT OPERATIONS</small></span>
+            </div>
+
+            <div class="auth-showcase-copy">
+                <span class="auth-eyebrow"><i class="bi bi-stars" aria-hidden="true"></i> Your event workspace</span>
+                <h1>Every event detail, moving in sync.</h1>
+                <p>Coordinate registrations, venues, speakers, sponsors, and on-site response from one connected workspace.</p>
+                <ul class="auth-feature-list">
+                    <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>Keep event operations organized in one place.</span></li>
+                    <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>Give attendees a simple self-service experience.</span></li>
+                    <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>Help organizers see the details that need attention.</span></li>
+                </ul>
+            </div>
+
+            <div class="auth-showcase-footer"><i class="bi bi-shield-check" aria-hidden="true"></i> Sign in to continue to your EventOps AI workspace.</div>
+        </section>
+
+        <section class="auth-panel" aria-labelledby="login-title">
+            <div class="auth-form-wrap">
+                <span class="auth-panel-icon"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i></span>
+                <h2 id="login-title">Welcome back</h2>
+                <p class="auth-panel-intro">Choose your account type, then sign in with its email and password.</p>
+
+                <form class="auth-form" method="POST" action="{{ url_for('login') }}" id="loginForm" novalidate>
+                    <fieldset class="mb-3">
+                        <legend class="form-label">Sign in as</legend>
+                        <div class="auth-role-grid">
+                            <label class="auth-role-option">
+                                <input type="radio" name="account_type" value="user" required {% if request.form.get('account_type', 'user') == 'user' %}checked{% endif %}>
+                                <span class="auth-role-card">
+                                    <span class="auth-role-icon"><i class="bi bi-person" aria-hidden="true"></i></span>
+                                    <span><strong>Attendee</strong><small>Browse events and manage registrations</small></span>
+                                </span>
+                            </label>
+                            <label class="auth-role-option">
+                                <input type="radio" name="account_type" value="admin" required {% if request.form.get('account_type', 'user') == 'admin' %}checked{% endif %}>
+                                <span class="auth-role-card">
+                                    <span class="auth-role-icon"><i class="bi bi-shield-lock" aria-hidden="true"></i></span>
+                                    <span><strong>Admin</strong><small>Manage events and operations</small></span>
+                                </span>
+                            </label>
+                        </div>
+                    </fieldset>
+                    <div class="mb-3">
+                        <label class="form-label" for="login-email">Email address</label>
+                        <input class="form-control" type="email" id="login-email" name="email" value="{{ request.form.get('email', '') }}" autocomplete="email" placeholder="you@example.com" required autofocus>
+                        <div class="invalid-feedback">Please enter a valid email address.</div>
+                    </div>
+                    <div class="mb-4 position-relative">
+                        <label class="form-label" for="login-password">Password</label>
+                        <input class="form-control password-input" type="password" id="login-password" name="password" autocomplete="current-password" placeholder="Enter your password" required>
+                        <button class="auth-password-toggle" type="button" id="togglePassword" aria-label="Show password" aria-pressed="false">
+                            <i class="bi bi-eye" aria-hidden="true"></i>
+                        </button>
+                        <div class="invalid-feedback">Please enter your password.</div>
+                    </div>
+                    <button class="btn btn-primary auth-submit w-100" type="submit">Sign in <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i></button>
+                </form>
+
+                <p class="auth-switch">New to EventOps AI? <a href="{{ url_for('register') }}">Create an account</a></p>
+                <a class="auth-back-link" href="{{ url_for('index') }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to home</a>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (() => {
+        const toggleButton = document.getElementById("togglePassword");
+        const passwordInput = document.getElementById("login-password");
+        const form = document.getElementById("loginForm");
+
+        if (toggleButton && passwordInput) {
+            toggleButton.addEventListener("click", () => {
+                const showPassword = passwordInput.type === "password";
+                passwordInput.type = showPassword ? "text" : "password";
+                toggleButton.setAttribute("aria-label", showPassword ? "Hide password" : "Show password");
+                toggleButton.setAttribute("aria-pressed", String(showPassword));
+
+                const icon = toggleButton.querySelector("i");
+                icon.classList.toggle("bi-eye", !showPassword);
+                icon.classList.toggle("bi-eye-slash", showPassword);
+            });
+        }
+
+        if (form) {
+            form.addEventListener("submit", (event) => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add("was-validated");
+            });
+        }
+    })();
+</script>
+{% endblock %}
