@@ -1,0 +1,504 @@
+{% extends "base.html" %}
+
+{% block title %}AI Assistant — EventOps AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .assistant-shell {
+        max-width: 980px;
+        margin-inline: auto;
+    }
+
+    .assistant-chat {
+        display: flex;
+        height: min(75vh, 760px);
+        min-height: 440px;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid #e5eaf3;
+        border-radius: 1.5rem;
+        background: #fff;
+        box-shadow: 0 14px 38px rgba(28, 42, 82, .08);
+    }
+
+    .assistant-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .75rem;
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, #0d6efd, #6610f2);
+        color: #fff;
+    }
+
+    .assistant-header-main {
+        display: flex;
+        align-items: center;
+        gap: .85rem;
+    }
+
+    .assistant-header-icon {
+        font-size: 2rem;
+        line-height: 1;
+    }
+
+    .assistant-header-subtitle {
+        color: rgba(255, 255, 255, .82);
+    }
+
+    .assistant-clear {
+        border: 1px solid rgba(255, 255, 255, .22);
+        border-radius: 999px;
+        padding: .35rem .85rem;
+        background: rgba(255, 255, 255, .14);
+        color: #fff;
+        font-size: .85rem;
+        transition: background-color .2s ease;
+    }
+
+    .assistant-clear:hover:not(:disabled),
+    .assistant-clear:focus-visible {
+        background: rgba(255, 255, 255, .28);
+    }
+
+    .assistant-quick-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+        padding: .7rem 1.25rem;
+        border-bottom: 1px solid #e9ecef;
+        background: #f8f9fa;
+    }
+
+    .assistant-quick-action {
+        border: 1px solid #dee2e6;
+        border-radius: 999px;
+        padding: .35rem .9rem;
+        background: #fff;
+        color: #212529;
+        font-size: .82rem;
+        transition: transform .2s ease, background-color .2s ease, color .2s ease;
+    }
+
+    .assistant-quick-action:hover:not(:disabled),
+    .assistant-quick-action:focus-visible {
+        transform: translateY(-1px);
+        border-color: #0d6efd;
+        background: #0d6efd;
+        color: #fff;
+    }
+
+    .assistant-messages {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+        flex-direction: column;
+        gap: .8rem;
+        overflow-y: auto;
+        padding: 1.25rem;
+        background: #f8f9fa;
+        scroll-behavior: smooth;
+    }
+
+    .assistant-bubble {
+        position: relative;
+        max-width: min(86%, 720px);
+        padding: .8rem 1.1rem;
+        border-radius: 1rem;
+        line-height: 1.55;
+        overflow-wrap: anywhere;
+        animation: assistant-fade-in .25s ease-out;
+    }
+
+    .assistant-bubble.user {
+        align-self: flex-end;
+        border-bottom-right-radius: .25rem;
+        background: #0d6efd;
+        color: #fff;
+    }
+
+    .assistant-bubble.assistant {
+        align-self: flex-start;
+        border: 1px solid #e5eaf3;
+        border-bottom-left-radius: .25rem;
+        background: #fff;
+        color: #25324b;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, .045);
+        padding-right: 2.25rem;
+    }
+
+    .assistant-message-content p {
+        margin: 0 0 .45rem;
+    }
+
+    .assistant-message-content p:last-child {
+        margin-bottom: 0;
+    }
+
+    .assistant-message-content ul {
+        margin: 0;
+        padding-left: 1.35rem;
+    }
+
+    .assistant-message-time {
+        display: block;
+        margin-top: .35rem;
+        color: #6c757d;
+        font-size: .66rem;
+        text-align: right;
+    }
+
+    .assistant-bubble.user .assistant-message-time {
+        color: rgba(255, 255, 255, .75);
+    }
+
+    .assistant-copy {
+        position: absolute;
+        top: .25rem;
+        right: .35rem;
+        border: 0;
+        padding: .15rem .35rem;
+        background: transparent;
+        color: #6c757d;
+        opacity: 0;
+        cursor: pointer;
+        transition: opacity .2s ease;
+    }
+
+    .assistant-bubble.assistant:hover .assistant-copy,
+    .assistant-bubble.assistant:focus-within .assistant-copy {
+        opacity: 1;
+    }
+
+    .assistant-typing {
+        display: none;
+        align-self: flex-start;
+        gap: .25rem;
+        align-items: center;
+        min-height: 2.5rem;
+        padding: .65rem .9rem;
+        border: 1px solid #e5eaf3;
+        border-radius: 1rem;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, .045);
+    }
+
+    .assistant-typing.is-visible {
+        display: flex;
+    }
+
+    .assistant-typing span {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #6c757d;
+        animation: assistant-bounce 1.4s infinite;
+    }
+
+    .assistant-typing span:nth-child(2) { animation-delay: .2s; }
+    .assistant-typing span:nth-child(3) { animation-delay: .4s; }
+
+    .assistant-entry {
+        padding: 1rem 1.25rem;
+        border-top: 1px solid #dee2e6;
+        background: #fff;
+    }
+
+    .assistant-entry .form-control {
+        min-width: 0;
+        padding: .75rem 1.1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 999px 0 0 999px;
+    }
+
+    .assistant-entry .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 .2rem rgba(13, 110, 253, .15);
+    }
+
+    .assistant-entry .btn {
+        border-radius: 0 999px 999px 0;
+        padding-inline: 1.25rem;
+        background: linear-gradient(135deg, #0d6efd, #6610f2);
+        font-weight: 600;
+    }
+
+    .assistant-entry .form-text {
+        margin: .45rem .25rem 0;
+    }
+
+    @keyframes assistant-fade-in {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes assistant-bounce {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-4px); }
+    }
+
+    @media (max-width: 576px) {
+        .assistant-chat {
+            height: min(80vh, 760px);
+            min-height: 380px;
+            border-radius: 1rem;
+        }
+
+        .assistant-header { padding: .85rem 1rem; }
+        .assistant-quick-actions { padding-inline: .85rem; }
+        .assistant-quick-action { padding: .3rem .7rem; font-size: .75rem; }
+        .assistant-messages { padding: 1rem .85rem; }
+        .assistant-bubble { max-width: 92%; }
+        .assistant-entry { padding: .85rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .assistant-messages { scroll-behavior: auto; }
+        .assistant-bubble, .assistant-typing span { animation: none; }
+        *, *::before, *::after { transition-duration: .01ms !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="assistant-shell" data-api-url="{{ url_for('assistant_api') }}" aria-labelledby="assistant-title">
+    <div class="mb-3">
+        <span class="text-primary fw-bold text-uppercase small">EventOps AI</span>
+        <h1 id="assistant-title" class="h2 fw-bold mt-1 mb-1">Event operations assistant</h1>
+        <p class="text-secondary mb-0">Ask about events, registrations, venues, speakers, or reminders.</p>
+    </div>
+
+    <div class="assistant-chat">
+        <header class="assistant-header">
+            <div class="assistant-header-main">
+                <i class="bi bi-robot assistant-header-icon" aria-hidden="true"></i>
+                <div>
+                    <h2 class="h5 mb-0">EventOps AI Assistant</h2>
+                    <small class="assistant-header-subtitle">Here to help with your events</small>
+                </div>
+            </div>
+            <button class="assistant-clear" id="assistant-clear" type="button" title="Clear chat history">
+                <i class="bi bi-trash me-1" aria-hidden="true"></i>Clear
+            </button>
+        </header>
+
+        <div class="assistant-quick-actions" aria-label="Suggested questions">
+            <button class="assistant-quick-action" type="button" data-message="Show me upcoming events">📅 Upcoming Events</button>
+            <button class="assistant-quick-action" type="button" data-message="Show my registrations">📋 My Registrations</button>
+            <button class="assistant-quick-action" type="button" data-message="List all venues">🏢 Venues</button>
+            <button class="assistant-quick-action" type="button" data-message="List all speakers">🎤 Speakers</button>
+            <button class="assistant-quick-action" type="button" data-message="Remind me about the AI Summit 1 hour before">⏰ Set Reminder</button>
+        </div>
+
+        <div class="assistant-messages" id="assistant-messages" role="log" aria-live="polite" aria-relevant="additions text">
+            <div class="assistant-bubble assistant" id="assistant-welcome">
+                <div class="assistant-message-content">👋 Hi {{ current_user.name }}, I’m your EventOps AI assistant. I can help with event details, registrations, venues, speakers, and reminders. Ask me anything or choose a suggestion above.</div>
+                <span class="assistant-message-time">{{ now.strftime('%I:%M %p') }}</span>
+            </div>
+            <div class="assistant-typing" id="assistant-typing" role="status" aria-label="Assistant is thinking" aria-hidden="true">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+
+        <form class="assistant-entry" id="assistant-form">
+            <label class="visually-hidden" for="assistant-input">Your message</label>
+            <div class="input-group">
+                <input class="form-control" id="assistant-input" type="text" maxlength="2000" placeholder="Type your question…" autocomplete="off" autofocus required>
+                <button class="btn btn-primary" id="assistant-send" type="submit">
+                    <i class="bi bi-send me-1" aria-hidden="true"></i>Send
+                </button>
+            </div>
+            <div class="form-text" id="assistant-status">Avoid sharing passwords or sensitive personal information.</div>
+        </form>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+    const shell = document.querySelector('.assistant-shell');
+    const form = document.getElementById('assistant-form');
+    const input = document.getElementById('assistant-input');
+    const sendButton = document.getElementById('assistant-send');
+    const clearButton = document.getElementById('assistant-clear');
+    const messages = document.getElementById('assistant-messages');
+    const status = document.getElementById('assistant-status');
+    const typing = document.getElementById('assistant-typing');
+    const welcomeTemplate = document.getElementById('assistant-welcome');
+    const defaultStatus = 'Avoid sharing passwords or sensitive personal information.';
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    const quickActions = document.querySelectorAll('.assistant-quick-action');
+    let isBusy = false;
+
+    function getTimestamp() {
+        return new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit' }).format(new Date());
+    }
+
+    function appendInlineText(container, text) {
+        const boldPattern = /\*([^*]+)\*/g;
+        let lastIndex = 0;
+        let match;
+
+        while ((match = boldPattern.exec(text)) !== null) {
+            container.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+            const strong = document.createElement('strong');
+            strong.textContent = match[1];
+            container.appendChild(strong);
+            lastIndex = boldPattern.lastIndex;
+        }
+
+        container.appendChild(document.createTextNode(text.slice(lastIndex)));
+    }
+
+    function appendFormattedText(container, text) {
+        let list = null;
+        String(text).split(/\r?\n/).forEach((line) => {
+            const bullet = line.match(/^\s*[•*-]\s+(.+)$/);
+            if (bullet) {
+                if (!list) {
+                    list = document.createElement('ul');
+                    container.appendChild(list);
+                }
+                const item = document.createElement('li');
+                appendInlineText(item, bullet[1]);
+                list.appendChild(item);
+                return;
+            }
+
+            list = null;
+            if (!line) {
+                container.appendChild(document.createElement('br'));
+                return;
+            }
+
+            const paragraph = document.createElement('p');
+            appendInlineText(paragraph, line);
+            container.appendChild(paragraph);
+        });
+    }
+
+    async function copyText(text) {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            return;
+        }
+
+        const temporaryInput = document.createElement('textarea');
+        temporaryInput.value = text;
+        temporaryInput.style.position = 'fixed';
+        temporaryInput.style.opacity = '0';
+        document.body.appendChild(temporaryInput);
+        temporaryInput.select();
+        const copied = document.execCommand('copy');
+        temporaryInput.remove();
+        if (!copied) throw new Error('Copy failed');
+    }
+
+    function addMessage(text, role) {
+        const bubble = document.createElement('div');
+        bubble.className = `assistant-bubble ${role}`;
+
+        const content = document.createElement('div');
+        content.className = 'assistant-message-content';
+        appendFormattedText(content, text);
+        bubble.appendChild(content);
+
+        const time = document.createElement('span');
+        time.className = 'assistant-message-time';
+        time.textContent = getTimestamp();
+        bubble.appendChild(time);
+
+        if (role === 'assistant') {
+            const copyButton = document.createElement('button');
+            copyButton.className = 'assistant-copy';
+            copyButton.type = 'button';
+            copyButton.title = 'Copy response';
+            copyButton.setAttribute('aria-label', 'Copy response');
+            copyButton.innerHTML = '<i class="bi bi-clipboard" aria-hidden="true"></i>';
+            copyButton.addEventListener('click', async () => {
+                try {
+                    await copyText(String(text));
+                    copyButton.innerHTML = '<i class="bi bi-check2" aria-hidden="true"></i>';
+                    copyButton.title = 'Copied';
+                    setTimeout(() => {
+                        copyButton.innerHTML = '<i class="bi bi-clipboard" aria-hidden="true"></i>';
+                        copyButton.title = 'Copy response';
+                    }, 1800);
+                } catch (error) {
+                    copyButton.title = 'Clipboard unavailable';
+                }
+            });
+            bubble.appendChild(copyButton);
+        }
+
+        messages.insertBefore(bubble, typing);
+        messages.scrollTop = messages.scrollHeight;
+        return bubble;
+    }
+
+    function setBusy(busy) {
+        isBusy = busy;
+        input.disabled = busy;
+        sendButton.disabled = busy;
+        clearButton.disabled = busy;
+        quickActions.forEach((button) => { button.disabled = busy; });
+        typing.classList.toggle('is-visible', busy);
+        typing.setAttribute('aria-hidden', String(!busy));
+        status.textContent = busy ? 'Thinking…' : defaultStatus;
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    async function sendMessage(rawMessage) {
+        const message = String(rawMessage || '').trim();
+        if (!message || isBusy) return;
+
+        addMessage(message, 'user');
+        input.value = '';
+        setBusy(true);
+
+        const headers = { 'Content-Type': 'application/json' };
+        if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+
+        try {
+            const response = await fetch(shell.dataset.apiUrl, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ message })
+            });
+            const result = await response.json();
+            if (!response.ok || result.error) {
+                addMessage(result.error || 'The assistant could not answer right now. Please try again.', 'assistant');
+            } else {
+                addMessage(typeof result.reply === 'string' ? result.reply : 'The assistant returned an empty response. Please try again.', 'assistant');
+            }
+        } catch (error) {
+            addMessage('Sorry, I could not reach the assistant. Please try again.', 'assistant');
+        } finally {
+            setBusy(false);
+            input.focus();
+        }
+    }
+
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        sendMessage(input.value);
+    });
+
+    quickActions.forEach((button) => {
+        button.addEventListener('click', () => sendMessage(button.dataset.message));
+    });
+
+    clearButton.addEventListener('click', () => {
+        if (isBusy) return;
+        const welcome = welcomeTemplate.cloneNode(true);
+        welcome.id = 'assistant-welcome';
+        welcome.querySelector('.assistant-message-time').textContent = getTimestamp();
+        messages.replaceChildren(welcome, typing);
+        input.focus();
+    });
+
+    input.focus();
+})();
+</script>
+{% endblock %}
